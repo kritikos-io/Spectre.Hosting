@@ -1,10 +1,12 @@
 <Project>
-  <ImportGroup Condition="Exists($([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))) == 'true'">
-    <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+  <ImportGroup
+    Condition="Exists($([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))) == 'true'">
+    <Import
+      Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
   </ImportGroup>
 
   <PropertyGroup Label="Package">
-    <PackageProjectUrl>http://localhost</PackageProjectUrl>
-    <RepositoryUrl>http://localhost</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/kritikos-io/Spectre.Hosting</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/kritikos-io/Spectre.Hosting</RepositoryUrl>
   </PropertyGroup>
 </Project>
