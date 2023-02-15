@@ -1,10 +1,103 @@
-# Templates - Dotnet
+# Spectre.Hosting
 
-A simple template leveraging [.Config][1] dotfiles submodule  for rapid project deployment. Simply rename Solution.{code-workspace,sln,sln.DotSettings} to your project name and get started! Afterwards, replace this readme with the actual documentation of your project.
+An opinionated set of extensions and infrastructure for the excelent [Spectre.Console.Cli][1], mainly covering the
+integration with NET Generic Host, Dependency Injection and logging via [Serilog][2].
 
-Additionally, change the Project & Repository urls on [src/Directory.Build.props](src/Directory.Build.props).
+## Installation
 
-Additionally, until GitHub properly supports submodule definitions from template repositories, after cloning you should run
-```git submodule add https://github.com/kritikos-io/.config``` from the repository root. You can replace the submodule with a compatible fork (to preserve your own default namespace etc) **provided it keeps file naming intact** since most files are appearing as symlinks.
+```Add-Package Kritikos.Spectre.Hosting```
 
-[1]: https://github.com/kritikos-io/.config
+## Usage
+
+### Generic Host
+
+Runs the `CommandApp` as a HostedService in a .NET Generic Host, providing dependency injection, integration with the
+Console Runtime, and logging to event viewer/system journal via `Microsoft.Extensions.Hosting.Systemd`
+and `Microsoft.Extensions.Hosting.WindowsServices`.
+Internally enables both logging functionality and dependency injection.
+
+```csharp
+public class Startup : ICommandAppStartup
+{
+  private readonly IConfiguration configuration;
+  private readonly IHostEnvironment environment;
+
+  public Startup(IConfiguration configuration, IHostEnvironment environment)
+  {
+    this.configuration = configuration;
+    this.environment = environment;
+  }
+
+  public void ConfigureServices(IServiceCollection services)
+  {
+    // inject required services
+  }
+
+   public void Configure(IConfigurator appConfiguration)
+  {
+    // configure Spectre.Console.Cli CommandApp
+    ArgumentNullException.ThrowIfNull(appConfiguration);
+    appConfiguration
+      .SetApplicationName("devops-cli")
+      .CaseSensitivity(CaseSensitivity.None);
+
+    appConfiguration.AddCommand<FooCommand>("foo");
+  }
+}
+```
+
+```csharp
+var host = Host.CreateDefaultBuilder(args)
+  .ConfigureCommandLineDefaults<Startup>()
+  .Build();
+
+await host.RunAsync();
+```
+
+### Dependency Injection
+
+Provide a proper `IServiceCollection` implementation to `TypeRegistrar` and use it when constructing your `CommandApp`:
+
+```csharp
+var services = new ServiceCollection();
+var app = new CommandApp(new TypeRegistrar(services));
+```
+
+### Logging
+
+Predefined logging settings include settable verbosity at run time and logging to a file writer.
+To use:
+
+- Inherit `LogCommandSettings` on your own command settings class
+- Pass the `LogInterceptor` to your CommandApp as an interceptor
+- Call `AddSpectreInterception()` to your Serilog LoggerConfiguration
+
+```csharp
+internal class GitBranchNamingSettings : LogCommandSettings
+{
+  [CommandArgument(0, "[branch]")]
+  [DefaultValue(null)]
+  public string? BranchName { get; init; } = null;
+}
+```
+
+```csharp
+var app = new CommandApp()
+app
+  .Configure(c =>
+  {
+    c.SetInterceptor(new LogInterceptor());
+  });
+```
+
+```csharp
+Log.Logger = new LoggerConfiguration()
+  .AddSpectreInterception()
+  .CreateLogger();
+```
+
+Alternatively, create your own implementations of the above classes.
+
+[1]: https://spectreconsole.net/cli/
+
+[2]: https://github.com/serilog/serilog
