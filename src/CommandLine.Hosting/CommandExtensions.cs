@@ -1,3 +1,4 @@
+// ReSharper disable once CheckNamespace - Recommended namespace for extension methods
 namespace Microsoft.Extensions.DependencyInjection;
 
 using System.Reflection;

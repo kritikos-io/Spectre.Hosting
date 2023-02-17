@@ -9,11 +9,13 @@ public class LoggingEnricher : ILogEventEnricher
   private string? cachedLogFilePath;
   private LogEventProperty? cachedLogFilePathProperty;
 
-  public static string Path { get; internal set; } = string.Empty;
+  private static string Path { get; set; } = string.Empty;
 
   /// <inheritdoc />
   public void Enrich(LogEvent? logEvent, ILogEventPropertyFactory propertyFactory)
   {
+    ArgumentNullException.ThrowIfNull(propertyFactory);
+
     LogEventProperty logFilePathProperty;
     if (cachedLogFilePathProperty != null && Path.Equals(cachedLogFilePath, StringComparison.Ordinal))
     {

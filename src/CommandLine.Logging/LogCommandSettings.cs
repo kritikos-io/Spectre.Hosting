@@ -1,9 +1,6 @@
 namespace Kritikos.CommandLine.Logging;
 
 using System.ComponentModel;
-using System.Globalization;
-
-using Serilog.Events;
 
 using Spectre.Console.Cli;
 
