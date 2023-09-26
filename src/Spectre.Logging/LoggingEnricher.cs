@@ -1,4 +1,4 @@
-﻿namespace Kritikos.CommandLine.Logging;
+﻿namespace Kritikos.Spectre.Logging;
 
 using Serilog.Core;
 using Serilog.Events;
@@ -7,10 +7,10 @@ public class LoggingEnricher : ILogEventEnricher
 {
   public const string LogFilePathPropertyName = "LogFilePath";
 
-  private string _cachedLogFilePath;
-  private LogEventProperty? _cachedLogFilePathProperty;
+  private string cachedLogFilePath = string.Empty;
+  private LogEventProperty? cachedLogFilePathProperty;
 
-  public static string Path { get; } = string.Empty;
+  private static string Path { get; } = string.Empty;
 
   /// <inheritdoc />
   public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
@@ -20,14 +20,14 @@ public class LoggingEnricher : ILogEventEnricher
 
     LogEventProperty logFilePathProperty;
 
-    if (_cachedLogFilePathProperty != null && Path.Equals(_cachedLogFilePath, StringComparison.Ordinal))
+    if (cachedLogFilePathProperty != null && Path.Equals(cachedLogFilePath, StringComparison.Ordinal))
     {
-      logFilePathProperty = _cachedLogFilePathProperty;
+      logFilePathProperty = cachedLogFilePathProperty;
     }
     else
     {
-      _cachedLogFilePath = Path;
-      _cachedLogFilePathProperty = logFilePathProperty = propertyFactory.CreateProperty(LogFilePathPropertyName, Path);
+      cachedLogFilePath = Path;
+      cachedLogFilePathProperty = logFilePathProperty = propertyFactory.CreateProperty(LogFilePathPropertyName, Path);
     }
 
     logEvent.AddPropertyIfAbsent(logFilePathProperty);

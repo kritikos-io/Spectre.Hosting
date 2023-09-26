@@ -1,13 +1,24 @@
-namespace Kritikos.CommandLine.Hosting
+namespace Kritikos.Spectre.Infrastructure
 {
+  using global::Spectre.Console.Cli;
+
   using Microsoft.Extensions.DependencyInjection;
 
-  using Spectre.Console.Cli;
-
+  /// <summary>
+  /// Provides an interface for initializing services and middleware used by an application.
+  /// </summary>
   public interface ICommandAppStartup
   {
+    /// <summary>
+    /// Register services into the <see cref="IServiceCollection" />.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
     public void ConfigureServices(IServiceCollection services);
 
-    public void Configure(IConfigurator appConfiguration);
+    /// <summary>
+    /// Configures the application.
+    /// </summary>
+    /// <param name="app">An <see cref="IConfigurator"/> for the app to configure.</param>
+    public void Configure(IConfigurator app);
   }
 }

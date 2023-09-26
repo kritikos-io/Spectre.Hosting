@@ -1,8 +1,8 @@
-namespace Kritikos.CommandLine.Hosting;
+namespace Kritikos.Spectre.Infrastructure;
+
+using global::Spectre.Console.Cli;
 
 using Microsoft.Extensions.DependencyInjection;
-
-using Spectre.Console.Cli;
 
 internal sealed class TypeRegistrar(IServiceCollection services)
   : ITypeRegistrar, IDisposable

@@ -1,8 +1,8 @@
-namespace Kritikos.CommandLine.Logging;
+namespace Kritikos.Spectre.Logging;
 
 using System.ComponentModel;
 
-using Spectre.Console.Cli;
+using global::Spectre.Console.Cli;
 
 public abstract class LogCommandSettings : CommandSettings
 {

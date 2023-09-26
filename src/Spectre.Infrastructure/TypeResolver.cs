@@ -1,10 +1,10 @@
-namespace Kritikos.CommandLine.Hosting;
+namespace Kritikos.Spectre.Infrastructure;
 
 using System;
 
-using Microsoft.Extensions.DependencyInjection;
+using global::Spectre.Console.Cli;
 
-using Spectre.Console.Cli;
+using Microsoft.Extensions.DependencyInjection;
 
 internal sealed class TypeResolver(ServiceProvider provider)
   : ITypeResolver, IDisposable
