@@ -45,9 +45,31 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Directory.Packages.props = Directory.Packages.props
 	EndProjectSection
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Spectre.Infrastructure", "src\Spectre.Infrastructure\Spectre.Infrastructure.csproj", "{217F6444-2133-4563-9BC0-E22DE5D15DF5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Spectre.Logging", "src\Spectre.Logging\Spectre.Logging.csproj", "{356EDA4E-464C-4300-94F5-55DE3683B8E3}"
+EndProject
 Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{217F6444-2133-4563-9BC0-E22DE5D15DF5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{217F6444-2133-4563-9BC0-E22DE5D15DF5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{217F6444-2133-4563-9BC0-E22DE5D15DF5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{217F6444-2133-4563-9BC0-E22DE5D15DF5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{356EDA4E-464C-4300-94F5-55DE3683B8E3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{356EDA4E-464C-4300-94F5-55DE3683B8E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{356EDA4E-464C-4300-94F5-55DE3683B8E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{356EDA4E-464C-4300-94F5-55DE3683B8E3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{217F6444-2133-4563-9BC0-E22DE5D15DF5} = {52270E06-D3BB-4B8E-A261-377E460B5FD5}
+		{356EDA4E-464C-4300-94F5-55DE3683B8E3} = {52270E06-D3BB-4B8E-A261-377E460B5FD5}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {732C3E99-FDF6-4748-A339-C3C162241038}
