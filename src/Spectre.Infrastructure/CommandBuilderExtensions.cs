@@ -1,15 +1,16 @@
-﻿namespace Kritikos.CommandLine.Hosting;
+﻿namespace Kritikos.Spectre.Infrastructure;
 
 using System.Collections.Immutable;
 using System.Globalization;
+using System.Reflection;
 
-using Kritikos.CommandLine.Logging;
+using global::Spectre.Console.Cli;
+
+using Kritikos.Spectre.Logging;
 
 using Microsoft.Extensions.DependencyInjection;
 
 using Serilog;
-
-using Spectre.Console.Cli;
 
 public static class CommandBuilderExtensions
 {
@@ -35,10 +36,22 @@ public static class CommandBuilderExtensions
   /// <param name="builder">The instance of <see cref="CommandBuilder"/> to configure.</param>
   /// <typeparam name="T">The <see cref="ICommandAppStartup"/> to load <see cref="CommandSettings"/> from.</typeparam>
   /// <returns>The configured <paramref name="builder"/>.</returns>
-  public static CommandBuilder RegisterSettingsFromAssembly<T>(this CommandBuilder builder)
+  public static CommandBuilder RegisterSettingsFromAssemblyContaining<T>(this CommandBuilder builder)
   {
     ArgumentNullException.ThrowIfNull(builder);
     var assembly = typeof(T).Assembly;
+
+    return builder.RegisterSettingsFromAssembly(assembly);
+  }
+
+  /// <summary>
+  /// Registers all &lt;see cref="CommandSettings"/&gt; implementations found in the <paramref name="assembly"/>.
+  /// </summary>
+  /// <param name="builder">The instance of <see cref="CommandBuilder"/> to configure.</param>
+  /// <param name="assembly">The <see cref="Assembly"/> containing wanted <see cref="CommandSettings"/>.</param>
+  /// <returns>The configured <paramref name="builder"/>.</returns>
+  public static CommandBuilder RegisterSettingsFromAssembly(this CommandBuilder builder, Assembly assembly)
+  {
     var settings = assembly
       .GetTypes()
       .Where(x => typeof(CommandSettings).IsAssignableFrom(x))
@@ -52,7 +65,12 @@ public static class CommandBuilderExtensions
     return builder;
   }
 
-  public static CommandBuilder AddLogging(this CommandBuilder builder)
+  /// <summary>
+  /// Adds logging to the <see cref="ICommandApp"/> instance.
+  /// </summary>
+  /// <param name="builder">The instance of <see cref="CommandBuilder"/> to configure.</param>
+  /// <returns>The configured <paramref name="builder"/>.</returns>
+  public static CommandBuilder AddFileLogging(this CommandBuilder builder)
   {
     ArgumentNullException.ThrowIfNull(builder);
 
