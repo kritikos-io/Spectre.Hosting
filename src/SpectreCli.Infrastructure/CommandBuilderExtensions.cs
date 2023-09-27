@@ -1,16 +1,16 @@
-﻿namespace Kritikos.Spectre.Infrastructure;
+﻿namespace Kritikos.SpectreCli.Infrastructure;
 
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Reflection;
 
-using global::Spectre.Console.Cli;
-
-using Kritikos.Spectre.Logging;
+using Kritikos.SpectreCli.Logging;
 
 using Microsoft.Extensions.DependencyInjection;
 
 using Serilog;
+
+using Spectre.Console.Cli;
 
 public static class CommandBuilderExtensions
 {

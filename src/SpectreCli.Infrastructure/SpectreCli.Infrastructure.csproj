@@ -5,11 +5,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Spectre.Console.Cli"/>
+    <PackageReference Include="Spectre.Console.Cli" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Spectre.Logging\Spectre.Logging.csproj" />
+    <ProjectReference Include="..\SpectreCli.Logging\SpectreCli.Logging.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,9 +1,9 @@
-namespace Kritikos.Spectre.Logging;
-
-using global::Spectre.Console.Cli;
+namespace Kritikos.SpectreCli.Logging;
 
 using Serilog.Core;
 using Serilog.Events;
+
+using Spectre.Console.Cli;
 
 public class LogInterceptor : ICommandInterceptor
 {

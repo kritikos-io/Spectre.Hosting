@@ -1,4 +1,4 @@
-﻿namespace Kritikos.Spectre.Logging;
+﻿namespace Kritikos.SpectreCli.Logging;
 
 using Serilog.Core;
 using Serilog.Events;

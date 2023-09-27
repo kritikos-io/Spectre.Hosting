@@ -1,8 +1,8 @@
-﻿namespace Kritikos.Spectre.Infrastructure;
-
-using global::Spectre.Console.Cli;
+﻿namespace Kritikos.SpectreCli.Infrastructure;
 
 using Microsoft.Extensions.DependencyInjection;
+
+using Spectre.Console.Cli;
 
 /// <summary>
 /// A builder for <see cref="ICommandApp"/> instances.
