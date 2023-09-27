@@ -70,6 +70,7 @@ public static class CommandBuilderExtensions
   /// </summary>
   /// <param name="builder">The instance of <see cref="CommandBuilder"/> to configure.</param>
   /// <returns>The configured <paramref name="builder"/>.</returns>
+  /// <remarks>Inherit from <see cref="LogCommandSettings"/> to provide the path to the log file.</remarks>
   public static CommandBuilder AddFileLogging(this CommandBuilder builder)
   {
     ArgumentNullException.ThrowIfNull(builder);
@@ -110,6 +111,11 @@ public static class CommandBuilderExtensions
       }
 
       startup.ConfigureServices(builder.Services);
+      if (builder.HasConfiguredLogging)
+      {
+        app.Configure(c => c.SetInterceptor(new LogInterceptor()));
+      }
+
       app.Configure(startup.Configure);
     }
 

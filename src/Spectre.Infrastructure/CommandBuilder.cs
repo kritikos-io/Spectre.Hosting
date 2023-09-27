@@ -31,6 +31,7 @@ public sealed class CommandBuilder
     => new CommandBuilder()
       .UseStartup<T>()
       .RegisterSettingsFromAssemblyContaining<T>()
+      .AddFileLogging()
       .Build();
 
   /// <summary>
