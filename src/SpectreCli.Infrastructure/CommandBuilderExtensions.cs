@@ -45,7 +45,7 @@ public static class CommandBuilderExtensions
   }
 
   /// <summary>
-  /// Registers all &lt;see cref="CommandSettings"/&gt; implementations found in the <paramref name="assembly"/>.
+  /// Registers all <see langword="sealed" /> <see cref="CommandSettings"/> implementations found in the <paramref name="assembly"/>.
   /// </summary>
   /// <param name="builder">The instance of <see cref="CommandBuilder"/> to configure.</param>
   /// <param name="assembly">The <see cref="Assembly"/> containing wanted <see cref="CommandSettings"/>.</param>
@@ -55,14 +55,40 @@ public static class CommandBuilderExtensions
     var settings = assembly
       .GetTypes()
       .Where(x => typeof(CommandSettings).IsAssignableFrom(x))
+      .Where(x => x.IsSealed)
       .ToImmutableList();
 
+    // TODO: Add injection with multiple types
     foreach (var setting in settings)
     {
       builder.Services.AddSingleton(setting);
+      foreach (var parent in setting.GetParentTypes())
+      {
+        builder.Services.AddSingleton(parent, sp => sp.GetRequiredService(setting));
+      }
     }
 
     return builder;
+  }
+
+  internal static IEnumerable<Type> GetParentTypes(this Type? type)
+  {
+    if (type is null)
+    {
+      yield break;
+    }
+
+    foreach (var i in type.GetInterfaces())
+    {
+      yield return i;
+    }
+
+    var currentBaseType = type.BaseType;
+    while (currentBaseType is not null)
+    {
+      yield return currentBaseType;
+      currentBaseType = currentBaseType.BaseType;
+    }
   }
 
   /// <summary>
