@@ -8,6 +8,12 @@
         "resolved": "5.12.0",
         "contentHash": "dJuigXycpJNOiLT9or7mkHSkGFHgGW3/p6cNNYEKZBa7Hhp1FdX/cvqYWWYhRLpfoZOedeA7aRbYiOB3vW/dvA=="
       },
+      "Kritikos.Extensions.Primitive": {
+        "type": "Direct",
+        "requested": "[0.1.20, )",
+        "resolved": "0.1.20",
+        "contentHash": "crhbh0hQ9VljdlR/iMKvBcEz45s1UFO0ftSsr1J4igRhFMj6cLRNMIGAejdy1dP1My3oR3SpZfgzMSkyOXAyQg=="
+      },
       "SerilogAnalyzer": {
         "type": "Direct",
         "requested": "[0.15.0, )",

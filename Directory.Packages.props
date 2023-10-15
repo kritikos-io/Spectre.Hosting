@@ -1,11 +1,10 @@
 <Project>
-  <ImportGroup
-    Condition="Exists($([MSBuild]::GetPathOfFileAbove('Directory.Packages.props', '$(MSBuildThisFileDirectory)../'))) == 'true'">
-    <Import
-      Project="$([MSBuild]::GetPathOfFileAbove('Directory.Packages.props', '$(MSBuildThisFileDirectory)../'))" />
+  <ImportGroup Condition="Exists($([MSBuild]::GetPathOfFileAbove('Directory.Packages.props', '$(MSBuildThisFileDirectory)../'))) == 'true'">
+    <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Packages.props', '$(MSBuildThisFileDirectory)../'))" />
   </ImportGroup>
   <ItemGroup Label="Common Packages">
     <PackageVersion Include="GitVersion.MsBuild" Version="5.12.0" />
+    <PackageVersion Include="Kritikos.Extensions.Primitive" Version="0.1.20" />
     <PackageVersion Include="Microsoft.SourceLink.AzureRepos.Git" Version="1.1.1" />
     <PackageVersion Include="Microsoft.SourceLink.Bitbucket.Git" Version="1.1.1" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="1.1.1" />

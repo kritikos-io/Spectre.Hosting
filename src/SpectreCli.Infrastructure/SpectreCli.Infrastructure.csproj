@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Kritikos.Extensions.Primitive" />
     <PackageReference Include="Spectre.Console.Cli" />
   </ItemGroup>
 
