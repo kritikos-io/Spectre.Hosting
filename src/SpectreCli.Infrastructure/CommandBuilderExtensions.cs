@@ -12,6 +12,9 @@ using Serilog;
 
 using Spectre.Console.Cli;
 
+/// <summary>
+/// Extensions for easy building of <see cref="CommandApp"/> via <see cref="CommandBuilder"/>.
+/// </summary>
 public static class CommandBuilderExtensions
 {
   /// <summary>
@@ -58,7 +61,6 @@ public static class CommandBuilderExtensions
       .Where(x => x.IsSealed)
       .ToImmutableList();
 
-    // TODO: Add injection with multiple types
     foreach (var setting in settings)
     {
       builder.Services.AddSingleton(setting);
@@ -69,26 +71,6 @@ public static class CommandBuilderExtensions
     }
 
     return builder;
-  }
-
-  internal static IEnumerable<Type> GetParentTypes(this Type? type)
-  {
-    if (type is null)
-    {
-      yield break;
-    }
-
-    foreach (var i in type.GetInterfaces())
-    {
-      yield return i;
-    }
-
-    var currentBaseType = type.BaseType;
-    while (currentBaseType is not null)
-    {
-      yield return currentBaseType;
-      currentBaseType = currentBaseType.BaseType;
-    }
   }
 
   /// <summary>
@@ -151,5 +133,25 @@ public static class CommandBuilderExtensions
     }
 
     return app;
+  }
+
+  private static IEnumerable<Type> GetParentTypes(this Type? type)
+  {
+    if (type is null)
+    {
+      yield break;
+    }
+
+    foreach (var i in type.GetInterfaces())
+    {
+      yield return i;
+    }
+
+    var currentBaseType = type.BaseType;
+    while (currentBaseType is not null)
+    {
+      yield return currentBaseType;
+      currentBaseType = currentBaseType.BaseType;
+    }
   }
 }
