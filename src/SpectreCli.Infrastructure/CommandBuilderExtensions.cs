@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Reflection;
 
+using Kritikos.Extensions.Primitive;
 using Kritikos.SpectreCli.Logging;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -133,25 +134,5 @@ public static class CommandBuilderExtensions
     }
 
     return app;
-  }
-
-  private static IEnumerable<Type> GetParentTypes(this Type? type)
-  {
-    if (type is null)
-    {
-      yield break;
-    }
-
-    foreach (var i in type.GetInterfaces())
-    {
-      yield return i;
-    }
-
-    var currentBaseType = type.BaseType;
-    while (currentBaseType is not null)
-    {
-      yield return currentBaseType;
-      currentBaseType = currentBaseType.BaseType;
-    }
   }
 }
