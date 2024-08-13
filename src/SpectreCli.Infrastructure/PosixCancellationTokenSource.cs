@@ -3,12 +3,12 @@
 using System.Runtime.InteropServices;
 
 /// <summary>
-/// A POSIX-compatible handler of cancellation logic for console apps
+/// A POSIX-compatible handler of cancellation logic for console apps.
 /// </summary>
 internal sealed class PosixCancellationTokenSource : IDisposable
 {
   private readonly CancellationTokenSource cancellationSource = new();
-  private readonly List<PosixSignalRegistration> signalRegistrations = new();
+  private readonly List<PosixSignalRegistration> signalRegistrations = [];
 
   public PosixCancellationTokenSource()
   {
@@ -31,6 +31,8 @@ internal sealed class PosixCancellationTokenSource : IDisposable
     {
       signal.Dispose();
     }
+
+    cancellationSource.Dispose();
   }
 
   private void OnSignal(PosixSignalContext ctx)

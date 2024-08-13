@@ -25,7 +25,7 @@ public abstract class CancellableAsyncCommand<TCommandSettings> : AsyncCommand<T
   /// <inheritdoc />
   public override async Task<int> ExecuteAsync(CommandContext context, TCommandSettings settings)
   {
-    var cancellationSource = new PosixCancellationTokenSource();
+    using var cancellationSource = new PosixCancellationTokenSource();
     var cancellable = ExecuteAsync(context, settings, cancellationSource.Token);
     return await cancellable;
   }

@@ -4,7 +4,6 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Reflection;
 
-using Kritikos.Extensions.Primitive;
 using Kritikos.SpectreCli.Logging;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -25,7 +24,7 @@ public static class CommandBuilderExtensions
   /// <typeparam name="T">The <see cref="ICommandAppStartup"/> to use in configuring.</typeparam>
   /// <returns>The configured <paramref name="builder"/>.</returns>
   public static CommandBuilder UseStartup<T>(this CommandBuilder builder)
-    where T : ICommandAppStartup
+      where T : ICommandAppStartup
   {
     ArgumentNullException.ThrowIfNull(builder);
     var startup = typeof(T);
@@ -56,11 +55,14 @@ public static class CommandBuilderExtensions
   /// <returns>The configured <paramref name="builder"/>.</returns>
   public static CommandBuilder RegisterSettingsFromAssembly(this CommandBuilder builder, Assembly assembly)
   {
+    ArgumentNullException.ThrowIfNull(assembly);
+    ArgumentNullException.ThrowIfNull(builder);
+
     var settings = assembly
-      .GetTypes()
-      .Where(x => typeof(CommandSettings).IsAssignableFrom(x))
-      .Where(x => x.IsSealed)
-      .ToImmutableList();
+        .GetTypes()
+        .Where(x => typeof(CommandSettings).IsAssignableFrom(x))
+        .Where(x => x.IsSealed)
+        .ToImmutableList();
 
     foreach (var setting in settings)
     {
@@ -85,15 +87,16 @@ public static class CommandBuilderExtensions
     ArgumentNullException.ThrowIfNull(builder);
 
     var loggerConfiguration = new LoggerConfiguration()
-      .MinimumLevel.ControlledBy(LogInterceptor.LogLevel)
-      .Enrich.With<LoggingEnricher>()
-      .WriteTo.Map(
-        LoggingEnricher.LogFilePathPropertyName,
-        (logFilePath, wt) => wt.File($"{logFilePath}", formatProvider: CultureInfo.InvariantCulture),
-        1);
+        .MinimumLevel.ControlledBy(LogInterceptor.LogLevel)
+        .Enrich.With<LoggingEnricher>()
+        .WriteTo.Map(
+            LoggingEnricher.LogFilePathPropertyName,
+            (logFilePath, wt) => wt.File($"{logFilePath}", formatProvider: CultureInfo.InvariantCulture),
+            1);
 
-    builder.Services.AddLogging(configure => configure
-      .AddSerilog(loggerConfiguration.CreateLogger()));
+    builder.Services.AddLogging(
+        configure => configure
+            .AddSerilog(loggerConfiguration.CreateLogger()));
     builder.HasConfiguredLogging = true;
 
     return builder;

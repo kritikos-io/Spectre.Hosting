@@ -7,7 +7,7 @@ using Spectre.Console.Cli;
 internal sealed class TypeRegistrar(IServiceCollection services)
   : ITypeRegistrar, IDisposable
 {
-  private readonly List<IDisposable> builtProviders = new();
+  private readonly List<IDisposable> builtProviders = [];
 
   public ITypeResolver Build()
   {
