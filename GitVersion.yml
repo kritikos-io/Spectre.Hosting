@@ -1,0 +1,21 @@
+workflow: GitFlow/v1
+mode: ContinuousDelivery
+branches:
+  main:
+    mode: ContinuousDelivery
+    label: ''
+  develop:
+    label: alpha
+    source-branches:
+      - main
+      - feature
+  feature:
+    mode: ContinuousDelivery
+    label: '{BranchName}'
+    source-branches:
+      - develop
+
+prevent-increment:
+  of-merged-branch: true
+  when-branch-merged: true
+  when-current-commit-tagged: true

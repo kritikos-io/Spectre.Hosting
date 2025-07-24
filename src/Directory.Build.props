@@ -1,0 +1,11 @@
+<Project>
+  <ImportGroup
+    Condition="Exists($([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))) == 'true'">
+    <Import
+      Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+  </ImportGroup>
+
+  <PropertyGroup Label="Package">
+    <PackageProjectUrl>http://localhost</PackageProjectUrl>
+  </PropertyGroup>
+</Project>
