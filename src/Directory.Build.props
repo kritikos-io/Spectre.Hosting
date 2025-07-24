@@ -6,6 +6,6 @@
   </ImportGroup>
 
   <PropertyGroup Label="Package">
-    <PackageProjectUrl>http://localhost</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/kritikos-io/Spectre.Hosting</PackageProjectUrl>
   </PropertyGroup>
 </Project>
