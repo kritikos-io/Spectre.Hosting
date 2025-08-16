@@ -6,11 +6,12 @@ using Spectre.Console.Cli;
 
 public sealed class EnvironmentVariableAttribute(string name) : ParameterValueProviderAttribute
 {
-  private readonly string name = name;
+  public string Name { get; } = name;
 
   /// <inheritdoc />
   public override bool TryGetValue(CommandParameterContext context, out object? result)
   {
+    ArgumentNullException.ThrowIfNull(context);
     result = null;
     if (context.Value is not null)
     {
@@ -18,7 +19,7 @@ public sealed class EnvironmentVariableAttribute(string name) : ParameterValuePr
     }
 
     var targetType = context.Parameter.ParameterType;
-    var envValue = Environment.GetEnvironmentVariable(name);
+    var envValue = Environment.GetEnvironmentVariable(Name);
 
     if (targetType == typeof(string))
     {

@@ -24,11 +24,11 @@ public sealed class GenericHostBuilderTypeRegistrar(IHostBuilder builder)
     => builder.ConfigureServices((_, services) => services.AddSingleton(service, implementation));
 
   /// <inheritdoc />
-  public void RegisterLazy(Type service, Func<object> func)
+  public void RegisterLazy(Type service, Func<object> factory)
   {
-    ArgumentNullException.ThrowIfNull(func);
+    ArgumentNullException.ThrowIfNull(factory);
 
-    builder.ConfigureServices((_, services) => services.AddSingleton(service, _ => func()));
+    builder.ConfigureServices((_, services) => services.AddSingleton(service, _ => factory()));
   }
 
   /// <inheritdoc />
