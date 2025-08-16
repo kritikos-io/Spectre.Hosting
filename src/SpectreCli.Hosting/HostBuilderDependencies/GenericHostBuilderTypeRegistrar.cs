@@ -15,6 +15,8 @@ public sealed class GenericHostBuilderTypeRegistrar(IHostBuilder builder)
   private readonly IHostBuilder builder = builder;
   private ITypeResolver? cachedTypeResolver;
 
+  public IHost? Host { get; private set; }
+
   /// <inheritdoc />
   public void Register(Type service, Type implementation)
     => builder.ConfigureServices((_, services) => services.AddSingleton(service, implementation));
@@ -34,7 +36,14 @@ public sealed class GenericHostBuilderTypeRegistrar(IHostBuilder builder)
   /// <inheritdoc />
   public ITypeResolver Build()
   {
-    cachedTypeResolver ??= new GenericHostTypeResolver(builder.Build());
+    if (cachedTypeResolver is not null)
+    {
+      return cachedTypeResolver;
+    }
+
+    Host ??= builder.Build();
+    cachedTypeResolver = new GenericHostTypeResolver(Host);
+
     return cachedTypeResolver;
   }
 }
