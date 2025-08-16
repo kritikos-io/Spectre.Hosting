@@ -7,11 +7,8 @@ using Microsoft.Extensions.Hosting;
 
 using Spectre.Console.Cli;
 
-public class CommandBuilder
+public sealed class CommandBuilder
 {
-  private Action<IServiceCollection> configureServices;
-  private Action<IConfigurator> configureSpectre;
-
   public static ICommandApp CreateHostedCommandApp<T>(params string[] args)
     where T : ICommandAppServiceInjector, ICommandAppConfiguration
   {

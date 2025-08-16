@@ -17,7 +17,5 @@ public class CommandAppService(CommandAppWrapper wrapper) : IHostedService
 
   /// <inheritdoc />
   public Task StopAsync(CancellationToken cancellationToken)
-  {
-    return Task.CompletedTask;
-  }
+    => Task.CompletedTask;
 }
