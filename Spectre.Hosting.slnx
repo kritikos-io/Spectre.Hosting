@@ -14,6 +14,7 @@
     <File Path="Directory.Packages.props" />
     <File Path="dotnet.ruleset" />
     <File Path="GitVersion.yml" />
+    <File Path="stylecop.json" />
     <File Path="xunit.runner.json" />
   </Folder>
   <Folder Name="/samples/">
@@ -21,7 +22,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src\SpectreCli.Hosting\SpectreCli.Hosting.csproj" Type="Classic C#" />
-    <File Path="src\Directory.build.props" />
+    <File Path="src\Directory.Build.props" />
   </Folder>
   <Folder Name="/tests/">
     <File Path="tests\Directory.Build.props" />
