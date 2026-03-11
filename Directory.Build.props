@@ -33,6 +33,7 @@
     <AnalysisLevel>preview</AnalysisLevel>
     <AnalysisMode>All</AnalysisMode>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <CodeAnalysisTreatWarningsAsErrors Condition="$(CodeAnalysisTreatWarningsAsErrors) == ''">false</CodeAnalysisTreatWarningsAsErrors>
     <!-- Locked mode should only be enabled on CI -->
     <RestoreLockedMode Condition="'$(ContinuousIntegrationBuild)' == 'true'">true</RestoreLockedMode>
     <!-- Use deterministic builds -->
@@ -45,7 +46,7 @@
     <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <ApplicationVisualStyles>true</ApplicationVisualStyles>
-    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <EmitCompilerGeneratedFiles>false</EmitCompilerGeneratedFiles>
     <GenerateRequiresPreviewFeaturesAttribute>False</GenerateRequiresPreviewFeaturesAttribute>
     <DefaultItemExcludes>$(DefaultItemExcludes);*.log;*.binlog</DefaultItemExcludes>
   </PropertyGroup>
@@ -54,27 +55,31 @@
     <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
   </PropertyGroup>
 
+  <PropertyGroup Condition="$(ArtifactsPath) != ''">
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+  </PropertyGroup>
+
   <PropertyGroup Label="Central Package Management">
     <!-- Create Directory.Packages.props file next to solution to use -->
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <!-- Any transitive dependency defined below will be used explicitly on the version stated -->
-    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
 
   <PropertyGroup Label="Project Assets">
     <ProjectIcon Condition="Exists('$(MSBuildThisFileDirectory)\icon.png')">
-      $(MSBuildThisFileDirectory)\icon.png
+      $(MSBuildThisFileDirectory)icon.png
     </ProjectIcon>
     <ProjectIcon Condition="Exists('$(MSBuildProjectDirectory)\icon.png')">
-      $(MSBuildProjectDirectory)\icon.png
+      $(MSBuildProjectDirectory)icon.png
     </ProjectIcon>
     <ProjectIconExists Condition="$(ProjectIcon) != ''">true</ProjectIconExists>
 
     <ProjectReadMe Condition="Exists('$(MSBuildThisFileDirectory)\README.md')">
-      $(MSBuildThisFileDirectory)\README.md
+      $(MSBuildThisFileDirectory)README.md
     </ProjectReadMe>
     <ProjectReadMe Condition="Exists('$(MSBuildProjectDirectory)\README.md')">
-      $(MSBuildProjectDirectory)\README.md
+      $(MSBuildProjectDirectory)README.md
     </ProjectReadMe>
     <ProjectReadMeExists Condition="$(ProjectReadMe) != ''">true</ProjectReadMeExists>
   </PropertyGroup>
@@ -91,7 +96,6 @@
   </PropertyGroup>
 
   <PropertyGroup Label="OpenAPI Analyzers" Condition="'$(UsingMicrosoftNETSdkWeb)' == 'True'">
-    <IncludeOpenAPIAnalyzers>true</IncludeOpenAPIAnalyzers>
     <OpenApiDocumentsDirectory>$(MSBuildProjectDirectory)/OpenApi</OpenApiDocumentsDirectory>
   </PropertyGroup>
 
@@ -126,6 +130,7 @@
   <!-- Mark assemblies as CLS compliant so the compiler warns on non compliant usage -->
   <PropertyGroup Condition="$(IsPackable) == 'true'">
     <ClsCompliant>true</ClsCompliant>
+    <GenerateSBOM>true</GenerateSBOM>
   </PropertyGroup>
   <ItemGroup>
     <AssemblyAttribute Include="System.CLSCompliant">
@@ -134,20 +139,32 @@
     </AssemblyAttribute>
   </ItemGroup>
 
+  <!-- Use .NET ruleset for analyzers -->
+  <PropertyGroup Label="Code Analysis Ruleset"
+    Condition="Exists('$(MSBuildThisFileDirectory)\dotnet.ruleset')">
+    <CodeAnalysisRuleset>$(MSBuildThisFileDirectory)\dotnet.ruleset</CodeAnalysisRuleset>
+  </PropertyGroup>
+
   <!-- Use readme as nuget information -->
-  <ItemGroup Label="Readme" Condition="$(IsPackable) == 'True' AND $(ProjectReadMe) != ''">
-    <None Include="$(ProjectReadMe)" Pack="true" PackagePath="" Visible="true"/>
+  <ItemGroup Label="Readme" Condition="$(IsPackable) == 'True' AND $(ProjectReadMeExists) == 'True'">
+    <Content Include="$(ProjectReadMe)" PackagePath="README.md" />
   </ItemGroup>
 
   <!-- Use nuget icon -->
   <ItemGroup Label="Icon" Condition="$(IsPackable) == 'True' AND $(ProjectIconExists) == 'True'">
-    <None Include="$(ProjectIcon)" Pack="true" PackagePath="icon.png" Visible="false"/>
+    <Content Include="$(ProjectIcon)" Pack="true" PackagePath="icon.png" Visible="false"/>
   </ItemGroup>
 
   <!-- Uses pretty xUnit configuration -->
   <ItemGroup Label="xUnit Configuration"
              Condition="Exists('$(MSBuildThisFileDirectory)\xunit.runner.json') AND $(IsTestProject)=='True'">
     <Content Include="$(MSBuildThisFileDirectory)\xunit.runner.json" Link="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
+
+  <ItemGroup Label="Stylecop Configuration"
+    Condition="Exists('$(MSBuildThisFileDirectory)\stylecop.json')">
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)\stylecop.json" Link="stylecop.json"
+      CopyToOutputDirectory="Never" Visible="false" />
   </ItemGroup>
 
   <!-- Project internals are exposed to projects named $(Project).Tests by default -->
@@ -190,6 +207,13 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup Label="Analyzers">
+    <PackageReference Include="NewStyleCop.Analyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
   <ItemGroup Label="Test Frameworks" Condition="'$(IsTestProject)' == 'true'">
     <PackageReference Include="NSubstitute"/>
     <PackageReference Include="NSubstitute.Analyzers.CSharp">
@@ -200,6 +224,7 @@
 
   <ItemGroup Label="SourceLink" Condition="$(IsPackable) == 'true'">
     <SourceLinkGiteaHost Include="git.kritikos.io"/>
+    <PackageReference Include="Microsoft.Sbom.Targets" PrivateAssets="All" />
   </ItemGroup>
 
 </Project>
