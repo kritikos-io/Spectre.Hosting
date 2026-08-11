@@ -6,7 +6,6 @@
   </ImportGroup>
 
   <PropertyGroup Label="Project">
-    <NuGetAudit>true</NuGetAudit>
     <!-- Suppresses display of the sign-on banner -->
     <NoLogo>true</NoLogo>
     <!-- Prepend organization name to default namespace -->
@@ -16,7 +15,6 @@
     <!-- Generate documentation file and ignore warnings for undocumented elements -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PublishDocumentationFile>true</PublishDocumentationFile>
-    <NoWarn>$(NoWarn);1591;1701;1702;NU1507</NoWarn>
     <!-- Error out upon trying to package projects marked as not packable -->
     <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
     <!-- Disable warnings on preview SDK versions -->
@@ -33,22 +31,31 @@
     <AnalysisLevel>preview</AnalysisLevel>
     <AnalysisMode>All</AnalysisMode>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-    <CodeAnalysisTreatWarningsAsErrors Condition="$(CodeAnalysisTreatWarningsAsErrors) == ''">false</CodeAnalysisTreatWarningsAsErrors>
+    <!-- <TreatWarningsAsErrors Condition="'$(TreatWarningsAsErrors)' ==
+    ''">true</TreatWarningsAsErrors> -->
+    <CodeAnalysisTreatWarningsAsErrors>$(TreatWarningsAsErrors)</CodeAnalysisTreatWarningsAsErrors>
     <!-- Locked mode should only be enabled on CI -->
     <RestoreLockedMode Condition="'$(ContinuousIntegrationBuild)' == 'true'">true</RestoreLockedMode>
     <!-- Use deterministic builds -->
-    <Deterministic Condition="'$(ContinuousIntegrationBuild)' == 'True'">true</Deterministic>
-    <DeterministicSourcePaths Condition="'$(IsTestProject)' == 'true'">false</DeterministicSourcePaths>
+    <DeterministicSourcePaths>true</DeterministicSourcePaths>
+    <PathMap Condition="$(ArtifactsPath) != ''">$(ArtifactsPath)=/_/generated</PathMap>
     <!-- Use latest language version supported by the SDK -->
     <LangVersion>preview</LangVersion>
     <ClsCompliant>false</ClsCompliant>
-    <!-- Defaults to checked context for math operations, throws OverflowException when needed -->
-    <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
-    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
-    <ApplicationVisualStyles>true</ApplicationVisualStyles>
-    <EmitCompilerGeneratedFiles>false</EmitCompilerGeneratedFiles>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
     <GenerateRequiresPreviewFeaturesAttribute>False</GenerateRequiresPreviewFeaturesAttribute>
     <DefaultItemExcludes>$(DefaultItemExcludes);*.log;*.binlog</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Defaults to unchecked context for math operations for performance -->
+    <!-- set to true to throws OverflowException when needed -->
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+  </PropertyGroup>
+
+  <PropertyGroup Label="OpenApi Source Generated Interceptors">
+    <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(ArtifactsPath) == '' AND $(DisableCustomArtifactsPath) != 'true'">
@@ -57,13 +64,18 @@
 
   <PropertyGroup Condition="$(ArtifactsPath) != ''">
     <UseArtifactsOutput>true</UseArtifactsOutput>
+    <PackageOutputPath>$(ArtifactsPath)/nuget</PackageOutputPath>
+    <PublishDir>$(ArtifactsPath)/upload/$(MSBuildProjectName)</PublishDir>
   </PropertyGroup>
 
   <PropertyGroup Label="Central Package Management">
+    <NoWarn>$(NoWarn);NU1506</NoWarn>
     <!-- Create Directory.Packages.props file next to solution to use -->
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <!-- Any transitive dependency defined below will be used explicitly on the version stated -->
-    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+    <RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources>
+    <RestoreUseStaticGraphEvaluation>true</RestoreUseStaticGraphEvaluation>
   </PropertyGroup>
 
   <PropertyGroup Label="Project Assets">
@@ -84,22 +96,28 @@
     <ProjectReadMeExists Condition="$(ProjectReadMe) != ''">true</ProjectReadMeExists>
   </PropertyGroup>
 
-  <PropertyGroup Label="SDK Functionality"
-                 Condition="'$(UsingMicrosoftNETSdkWeb)' == 'True' OR '$(UsingMicrosoftNETSdkWorker)' == 'True'">
+  <PropertyGroup Label="SDK Functionality" Condition="'$(UsingMicrosoftNETSdkWeb)' == 'True' OR '$(UsingMicrosoftNETSdkWorker)' == 'True'">
     <IsPackable>false</IsPackable>
-    <PackAsTool>false</PackAsTool>
   </PropertyGroup>
 
-  <PropertyGroup Label="Disable Launch Settings for Worker Service"
-                 Condition="'$(UsingMicrosoftNETSdkWorker)' == 'True'">
+  <PropertyGroup Label="Test Functionality" Condition="$(IsTestProject) == 'true'">
+    <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Disable Launch Settings for Worker Service" Condition="'$(UsingMicrosoftNETSdkWorker)' == 'True'">
     <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
   </PropertyGroup>
 
   <PropertyGroup Label="OpenAPI Analyzers" Condition="'$(UsingMicrosoftNETSdkWeb)' == 'True'">
-    <OpenApiDocumentsDirectory>$(MSBuildProjectDirectory)/OpenApi</OpenApiDocumentsDirectory>
+    <OpenApiDocumentsDirectory>$(ArtifactsPath)/OpenApi</OpenApiDocumentsDirectory>
   </PropertyGroup>
 
-  <PropertyGroup Label="MAUI Features">
+  <PropertyGroup Condition="$(UseWindowsForms) == 'true'">
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ApplicationVisualStyles>true</ApplicationVisualStyles>
+  </PropertyGroup>
+
+  <PropertyGroup Label="MAUI Features" Condition="$(UseMaui) == 'true'">
     <TrimMode>Full</TrimMode>
     <MauiEnableXamlCBindingWithSourceCompilation>true</MauiEnableXamlCBindingWithSourceCompilation>
     <MauiStrictXamlCompilation>true</MauiStrictXamlCompilation>
@@ -107,24 +125,6 @@
 
   <PropertyGroup Label="Entity Framework Core - Compiled Model generation">
     <EFOptimizeContext>true</EFOptimizeContext>
-    <EFScaffoldModelStage>publish</EFScaffoldModelStage>
-  </PropertyGroup>
-
-  <!-- Sets deterministic source paths for CI builds -->
-  <PropertyGroup Label="CI Build">
-    <!--
-    https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml#system-variables -->
-    <ContinuousIntegrationBuild Condition="'$(TF_BUILD)' == 'true'">true</ContinuousIntegrationBuild>
-
-    <!--
-    https://help.github.com/en/actions/configuring-and-managing-workflows/using-environment-variables -->
-    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
-
-    <!-- https://docs.gitlab.com/ee/ci/variables/predefined_variables.html -->
-    <ContinuousIntegrationBuild Condition="'$(GITLAB_CI)' == 'true'">true</ContinuousIntegrationBuild>
-
-    <!-- https://www.appveyor.com/docs/environment-variables/ -->
-    <ContinuousIntegrationBuild Condition="'$(APPVEYOR)' == 'True'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
   <!-- Mark assemblies as CLS compliant so the compiler warns on non compliant usage -->
@@ -139,12 +139,6 @@
     </AssemblyAttribute>
   </ItemGroup>
 
-  <!-- Use .NET ruleset for analyzers -->
-  <PropertyGroup Label="Code Analysis Ruleset"
-    Condition="Exists('$(MSBuildThisFileDirectory)\dotnet.ruleset')">
-    <CodeAnalysisRuleset>$(MSBuildThisFileDirectory)\dotnet.ruleset</CodeAnalysisRuleset>
-  </PropertyGroup>
-
   <!-- Use readme as nuget information -->
   <ItemGroup Label="Readme" Condition="$(IsPackable) == 'True' AND $(ProjectReadMeExists) == 'True'">
     <Content Include="$(ProjectReadMe)" PackagePath="README.md" />
@@ -152,26 +146,17 @@
 
   <!-- Use nuget icon -->
   <ItemGroup Label="Icon" Condition="$(IsPackable) == 'True' AND $(ProjectIconExists) == 'True'">
-    <Content Include="$(ProjectIcon)" Pack="true" PackagePath="icon.png" Visible="false"/>
+    <Content Include="$(ProjectIcon)" Pack="true" PackagePath="icon.png" Visible="false" />
   </ItemGroup>
 
-  <!-- Uses pretty xUnit configuration -->
-  <ItemGroup Label="xUnit Configuration"
-             Condition="Exists('$(MSBuildThisFileDirectory)\xunit.runner.json') AND $(IsTestProject)=='True'">
-    <Content Include="$(MSBuildThisFileDirectory)\xunit.runner.json" Link="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+  <ItemGroup Label="Test Configuration" Condition="Exists('$(MSBuildThisFileDirectory)\testconfig.json') AND $(IsTestProject)=='True'">
+    <Content Include="$(MSBuildThisFileDirectory)\testconfig.json" Link="testconfig.json"
+      CopyToOutputDirectory="PreserveNewest" Visible="false" />
   </ItemGroup>
 
-  <ItemGroup Label="Stylecop Configuration"
-    Condition="Exists('$(MSBuildThisFileDirectory)\stylecop.json')">
+  <ItemGroup Label="Stylecop Configuration" Condition="Exists('$(MSBuildThisFileDirectory)\stylecop.json')">
     <AdditionalFiles Include="$(MSBuildThisFileDirectory)\stylecop.json" Link="stylecop.json"
       CopyToOutputDirectory="Never" Visible="false" />
-  </ItemGroup>
-
-  <!-- Project internals are exposed to projects named $(Project).Tests by default -->
-  <ItemGroup
-    Condition="@(InternalsVisibleToSuffix->Count()) == 0 AND @(InternalsVisibleTo->Count()) == 0">
-    <InternalsVisibleToSuffix Include=".Tests"/>
-    <InternalsVisibleToSuffix Include="Tests"/>
   </ItemGroup>
 
   <PropertyGroup Label="Package">
@@ -180,14 +165,9 @@
     <Authors>Alexandros Kritikos</Authors>
     <CurrentYear>$([System.DateTime]::Now.ToString(yyyy))</CurrentYear>
     <Copyright>Copyright © 2017-$(CurrentYear) Kritikos IO. All rights reserved.</Copyright>
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-    <PackageOutputPath Condition="$(PackageOutputPath) == ''">$(MSBuildThisFileDirectory)/packages</PackageOutputPath>
-    <PublishDir Condition="$(PublishDir) == ''">
-      $(MSBuildThisFileDirectory)/upload/$(MSBuildProjectName)</PublishDir>
     <PackageIcon Condition="$(ProjectIconExists) == 'True'">icon.png</PackageIcon>
     <PackageReadmeFile Condition="$(ProjectReadMeExists) == 'True'">README.md</PackageReadmeFile>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <RepositoryType>git</RepositoryType>
     <!-- Optional: Embed source files that are not tracked by the source control manager to the PDB -->
     <!-- This is useful if you generate files during the build -->
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
@@ -200,8 +180,7 @@
   </PropertyGroup>
 
   <ItemGroup Label="Versioning" Condition="'$(IsTestProject)' != 'true'">
-    <PackageReference Include="GitVersion.MsBuild"
-                      Condition="Exists('$(MSBuildThisFileDirectory)\.git')">
+    <PackageReference Include="GitVersion.MsBuild" Condition="Exists('$(MSBuildThisFileDirectory)\.git')">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
@@ -214,16 +193,8 @@
     </PackageReference>
   </ItemGroup>
 
-  <ItemGroup Label="Test Frameworks" Condition="'$(IsTestProject)' == 'true'">
-    <PackageReference Include="NSubstitute"/>
-    <PackageReference Include="NSubstitute.Analyzers.CSharp">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
-
   <ItemGroup Label="SourceLink" Condition="$(IsPackable) == 'true'">
-    <SourceLinkGiteaHost Include="git.kritikos.io"/>
+    <SourceLinkGiteaHost Include="git.kritikos.io" />
     <PackageReference Include="Microsoft.Sbom.Targets" PrivateAssets="All" />
   </ItemGroup>
 

@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.20
-ARG RUNTIME_BASE=app
+ARG RUNTIME_BASE=web
 ARG CONFIGURATION=Release
 ARG DOTNET_VERSION=10.0
 ARG RUNTIME_ID=linux-musl-x64
@@ -21,50 +21,105 @@ WORKDIR /source
 
 FROM sdk AS restore
 
-COPY --link Directory.* stylecop.json xunit.runner.json *.sln *.slnx *.config ./
+COPY --link .editorconfig .globalconfig global.json icon.png nuget.config *.slnx *.sln *.sln.DotSettings stylecop.json testconfig.json xunit.runner.json ./
+COPY --link --parents ./**Directory*.props ./**Directory.*.targets ./
 COPY --link --parents ./**.csproj ./**/packages.lock.json ./
+RUN ls -lR .
 
 RUN --mount=type=cache,target=/root/.nuget/packages \
-  dotnet restore && \
-  dotnet restore --runtime ${RUNTIME_ID}
+  dotnet restore
+
+FROM sdk AS gitversion
+RUN --mount=type=cache,target=/root/.nuget/packages dotnet tool install --global GitVersion.Tool
+ENV PATH="${PATH}:/root/.dotnet/tools"
+COPY --link --parents **/GitVersion.yml ./
+COPY --link .git/ ./.git/
+RUN dotnet-gitversion /output json > /version.json
 
 FROM restore AS build
 ARG CONFIGURATION
 
+RUN mkdir -p /source/artifacts/OpenApi && \
+  mkdir -p /source/artifacts/bin && \
+  mkdir -p /source/artifacts/obj && \
+  mkdir -p /source/artifacts/nugets && \
+  mkdir -p /source/artifacts/upload
+
+COPY LICENSE.md README.md ./
 COPY --link src/ src/
 COPY --link tests/ tests/
 COPY --link samples/ samples/
-COPY --link .git/ ./.git/
+COPY --link --from=gitversion /version.json ./version.json
+
+RUN GV_MAJOR=$(grep -o '"Major": *[0-9]*' version.json | grep -o '[0-9]*') && \
+  GV_MINOR=$(grep -o '"Minor": *[0-9]*' version.json | grep -o '[0-9]*') && \
+  GV_PATCH=$(grep -o '"Patch": *[0-9]*' version.json | grep -o '[0-9]*') && \
+  GV_SEMVER=$(grep -o '"SemVer": *"[^"]*"' version.json | cut -d'"' -f4) && \
+  GV_FULLSEMVER=$(grep -o '"FullSemVer": *"[^"]*"' version.json | cut -d'"' -f4) && \
+  GV_INFORMATIONAL=$(grep -o '"InformationalVersion": *"[^"]*"' version.json | cut -d'"' -f4) && \
+  { echo "GV_MAJOR=${GV_MAJOR}"; \
+    echo "GV_MINOR=${GV_MINOR}"; \
+    echo "GV_PATCH=${GV_PATCH}"; \
+    echo "GV_SEMVER=${GV_SEMVER}"; \
+    echo "GV_FULLSEMVER=${GV_FULLSEMVER}"; \
+    echo "GV_INFORMATIONAL=${GV_INFORMATIONAL}"; \
+    echo "VERSION_PROPS=\"/p:Version=\${GV_SEMVER} /p:AssemblyVersion=\${GV_MAJOR}.\${GV_MINOR}.\${GV_PATCH}.0 /p:FileVersion=\${GV_MAJOR}.\${GV_MINOR}.\${GV_PATCH}.0 /p:InformationalVersion=\${GV_INFORMATIONAL} /p:PackageVersion=\${GV_FULLSEMVER}\""; \
+  } > /source/version.env
 
 RUN --mount=type=cache,target=/root/.nuget/packages \
-  dotnet build --no-restore --configuration ${CONFIGURATION}
+  . /source/version.env && \
+  eval dotnet build --no-restore --configuration ${CONFIGURATION} ${VERSION_PROPS}
 
 FROM build AS test
 ARG CONFIGURATION
 
-RUN dotnet test --no-build --configuration ${CONFIGURATION}
+RUN --mount=type=cache,target=/root/.nuget/packages \
+  dotnet test --no-build --configuration ${CONFIGURATION}
+
+FROM node:lts-alpine AS openapi-lint
+RUN npm install -g @stoplight/spectral-cli
+WORKDIR /openapi
+COPY --link .spectral.yaml /tmp/.spectral.yaml
+COPY --link --from=build /source/artifacts/OpenApi/ .
+RUN if ls *.json 1>/dev/null 2>&1; then \
+  spectral lint ./*.json -r /tmp/.spectral.yaml --fail-severity=error; \
+  else \
+  echo "No OpenAPI documents found, skipping lint"; \
+  fi
 
 FROM test AS publish
 ARG CONFIGURATION
 ARG PUBLISHED_PROJECT
 ARG RUNTIME_BASE
+ARG PUBLISH_READY_TO_RUN=false
 ENV PROJECT=src/${PUBLISHED_PROJECT}/${PUBLISHED_PROJECT}.csproj
 
 RUN --mount=type=cache,target=/root/.nuget/packages \
+  dotnet restore --runtime ${RUNTIME_ID} ${PROJECT}
+
+RUN --mount=type=cache,target=/root/.nuget/packages \
+  . /source/version.env && \
   if [ "${RUNTIME_BASE}" = "self-contained" ]; then \
-  dotnet publish --configuration ${CONFIGURATION} \
+  eval dotnet publish --configuration ${CONFIGURATION} \
   --self-contained --runtime ${RUNTIME_ID} \
+  /p:PublishReadyToRun=${PUBLISH_READY_TO_RUN} \
+  /p:OpenApiGenerateDocuments=false \
+  ${VERSION_PROPS} \
   -o /app/publish ${PROJECT}; \
   else \
-  dotnet publish --configuration ${CONFIGURATION} \
+  eval dotnet publish --configuration ${CONFIGURATION} \
   --no-self-contained --runtime ${RUNTIME_ID} \
+  /p:PublishReadyToRun=${PUBLISH_READY_TO_RUN} \
+  /p:OpenApiGenerateDocuments=false \
+  ${VERSION_PROPS} \
   -o /app/publish ${PROJECT}; \
   fi
 
 FROM build AS pack
 
 RUN --mount=type=cache,target=/root/.nuget/packages \
-  dotnet pack --configuration Release --no-build --output /app/publish
+  . /source/version.env && \
+  eval dotnet pack --configuration Release ${VERSION_PROPS} --output /app/publish
 
 FROM sdk AS nuget-push
 WORKDIR /packages
@@ -107,6 +162,7 @@ ARG RUNTIME_BASE
 ENV LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
 
 COPY --link --from=publish --chown=root:root /app/publish .
+COPY --link --from=openapi-lint --chown=root:root /openapi/ /app/openapi/
 COPY --link --from=pyroscope-agent --chown=root:root /opt/pyroscope/ /pyroscope/
 RUN if [ "${RUNTIME_BASE}" = "self-contained" ]; then \
   chmod +x ${PUBLISHED_PROJECT}; \

@@ -1,17 +1,7 @@
 <Project>
-  <Target Name="RestoreNpmAssets">
+  <Target Name="RestoreNpmAssets" Condition="Exists('$(MSBuildProjectDirectory)/package.json')" BeforeTargets="Restore">
     <Exec Command="npm install" />
   </Target>
-
-  <PropertyGroup Label="Test Functionality" Condition="$(IsTestProject) == 'true'">
-    <IsPackable>false</IsPackable>
-    <PackAsTool>false</PackAsTool>
-    <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
-    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
-    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
-    <RunSettingsFilePath>$(MSBuildThisFileDirectory)\.runsettings</RunSettingsFilePath>
-    <NoWarn>$(NoWarn);CA1707</NoWarn>
-  </PropertyGroup>
 
   <ItemGroup Label="Hide Assets">
     <None Update="icon.png" Visible="false" />
@@ -19,52 +9,177 @@
     <None Update="packages.lock.json" Visible="false" />
   </ItemGroup>
 
+  <ItemGroup
+    Condition="'$(UsingMicrosoftNETSdkWeb)' == 'True' AND @(PackageReference->WithMetadataValue('Identity','Microsoft.AspNetCore.OpenApi')->Count()) &gt; 0">
+    <PackageReference Include="Microsoft.Extensions.ApiDescription.Server">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup
+    Condition="@(PackageReference->WithMetadataValue('Identity','NSubstitute')->Count()) &gt; 0">
+    <PackageReference Include="NSubstitute.Analyzers.CSharp">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <Target Name="RenameOpenApiDocuments"
+    AfterTargets="GenerateOpenApiDocuments"
+    Condition="'$(OpenApiDocumentsDirectory)' != ''">
+    <Move SourceFiles="$(OpenApiDocumentsDirectory)/$(MSBuildProjectName).json"
+      DestinationFiles="$(OpenApiDocumentsDirectory)/$(MSBuildProjectName)_v1.json"
+      Condition="Exists('$(OpenApiDocumentsDirectory)/$(MSBuildProjectName).json')" />
+  </Target>
+
+  <Target Name="SetHierarchicalPackageOutputPath"
+    BeforeTargets="_GetAbsoluteOutputPathsForPack"
+    Condition="'$(ArtifactsPath)' != '' AND '$(PackageVersion)' != ''">
+    <PropertyGroup>
+      <PackageOutputPath>$(ArtifactsPath)/nuget/$(PackageId)/$(PackageVersion)</PackageOutputPath>
+    </PropertyGroup>
+  </Target>
+
   <Target Name="AddInternalsVisibleTo" BeforeTargets="BeforeCompile">
     <!--
-      Add an ItemGroup with tags in the following format:
-      <InternalsVisibleTo Include="CustomTest1" />
-        -> [assembly: InternalsVisibleTo("CustomTest1")]
-      <InternalsVisibleTo Include="CustomTest2, PublicKey=abc" />
-        -> [assembly: InternalsVisibleTo("CustomTest2, PublicKey=abc")]
-      <InternalsVisibleTo Include="$(AssemblyName).Custom" />
-        -> [assembly: InternalsVisibleTo("ClassLibrary1.Custom")]
+      Exposes assembly internals to friend assemblies.
 
-      on a project with assembly name ClasLibrary1:
-      <InternalsVisibleToSuffix Include=".Tests" />
-        -> [assembly: InternalsVisibleTo("ClassLibrary1.Tests")]
-      <InternalsVisibleToSuffix Include=".FunctionalTests" />
-        -> [assembly: InternalsVisibleTo("ClassLibrary1.FunctionalTests")]
-     -->
+      The .NET SDK already turns <InternalsVisibleTo Include="..." /> items into
+      [assembly: InternalsVisibleTo("...")] attributes in its GetAssemblyAttributes
+      target (including strong-name PublicKey handling via PublicKey/Key metadata).
+      This target must therefore NOT emit those attributes itself - doing so emits
+      every friend assembly twice.
 
-    <!-- Add default suffix for tests -->
-    <ItemGroup>
+      Instead it only layers the project-local convention on top of the SDK:
+        * translate <InternalsVisibleToSuffix> entries into InternalsVisibleTo items
+          so the SDK can emit them, and
+        * apply a sensible default when a project declared no friend assemblies.
+
+      Examples on an assembly named "ClassLibrary1":
+        <InternalsVisibleTo Include="CustomTest1" />        (handled by the SDK)
+          -> [assembly: InternalsVisibleTo("CustomTest1")]
+        <InternalsVisibleToSuffix Include=".Tests" />       (handled here)
+          -> [assembly: InternalsVisibleTo("ClassLibrary1.Tests")]
+
+      Running at build time (before GetAssemblyAttributes) means the counts below
+      see items declared in both imported props and the project body, so an
+      explicit InternalsVisibleTo correctly suppresses the default suffix.
+    -->
+
+    <!-- Default: expose internals to "<AssemblyName>.Tests" when the project has
+         not declared any friend assemblies of its own. -->
+    <ItemGroup Condition="@(InternalsVisibleTo->Count()) == 0 AND @(InternalsVisibleToSuffix->Count()) == 0">
       <InternalsVisibleToSuffix Include=".Tests" />
     </ItemGroup>
 
-    <!-- Handle InternalsVisibleTo -->
-    <ItemGroup Condition="'@(InternalsVisibleTo->Count())' &gt; 0">
-      <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-        <_Parameter1>%(InternalsVisibleTo.Identity)</_Parameter1>
-      </AssemblyAttribute>
-    </ItemGroup>
-
-    <!-- Handle InternalsVisibleToSuffix -->
+    <!-- Translate the suffix convention into InternalsVisibleTo items for the SDK,
+         skipping the current assembly (e.g. a "*.Tests" project itself). -->
     <ItemGroup Condition="@(InternalsVisibleToSuffix->Count()) &gt; 0">
-      <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo"
-        Condition="$(AssemblyName.EndsWith(%(InternalsVisibleToSuffix.Identity))) == 'false'">
-        <_Parameter1>$(AssemblyName)%(InternalsVisibleToSuffix.Identity)</_Parameter1>
-      </AssemblyAttribute>
+      <InternalsVisibleTo Include="$(AssemblyName)%(InternalsVisibleToSuffix.Identity)"
+        Condition="$(AssemblyName.EndsWith(%(InternalsVisibleToSuffix.Identity))) == 'false'" />
     </ItemGroup>
   </Target>
 
   <Target Name="CreateReleaseNotesFromFile" BeforeTargets="GenerateNuspec"
-    Condition="Exists('$(MSBuildThisFileDirectory)changes.log')">
-    <ReadLinesFromFile File="$(MSBuildThisFileDirectory)changes.log">
+    DependsOnTargets="GenerateChangelogFromGit"
+    Condition="Exists('$(ChangeLogPath)')">
+    <ReadLinesFromFile File="$(ChangeLogPath)">
       <Output TaskParameter="Lines" ItemName="ReleaseNoteLines" />
     </ReadLinesFromFile>
     <PropertyGroup>
       <PackageReleaseNotes>@(ReleaseNoteLines, '%0a')</PackageReleaseNotes>
     </PropertyGroup>
+  </Target>
+
+  <PropertyGroup>
+    <ChangeLogPath Condition="'$(ChangeLogPath)' == ''">$(BaseIntermediateOutputPath)changes.log</ChangeLogPath>
+    <ChangeLogFromRef Condition="'$(ChangeLogFromRef)' == ''"></ChangeLogFromRef>
+    <ChangeLogCommitLimit Condition="'$(ChangeLogCommitLimit)' == ''">100</ChangeLogCommitLimit>
+    <ChangeLogUpstreamMergePattern Condition="'$(ChangeLogUpstreamMergePattern)' == ''">from .*/</ChangeLogUpstreamMergePattern>
+    <!-- Set to false to exclude commits from ProjectReference directories in the changelog -->
+    <ChangeLogIncludeReferences Condition="'$(ChangeLogIncludeReferences)' == ''">true</ChangeLogIncludeReferences>
+  </PropertyGroup>
+
+  <Target Name="GenerateChangelogFromGit"
+    BeforeTargets="GenerateNuspec"
+    Condition="'$(GenerateChangelogFromGit)' != 'false' AND Exists('$(MSBuildThisFileDirectory).git')">
+    <!-- #1: nearest reachable tag from HEAD, not globally newest; capture exit code to guard against no-tag repos -->
+    <Exec Command="git describe --tags --abbrev=0"
+      WorkingDirectory="$(MSBuildThisFileDirectory)"
+      ConsoleToMsBuild="true"
+      IgnoreExitCode="true"
+      StandardErrorImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitLastTagRaw" />
+      <Output TaskParameter="ExitCode" PropertyName="GitDescribeExitCode" />
+    </Exec>
+
+    <Exec Command="git rev-list --first-parent --merges -n 1 HEAD"
+      WorkingDirectory="$(MSBuildThisFileDirectory)"
+      ConsoleToMsBuild="true"
+      IgnoreExitCode="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitLastMergeRaw" />
+    </Exec>
+
+    <!-- #4: configurable upstream merge pattern via ChangeLogUpstreamMergePattern -->
+    <Exec Command="git rev-list --first-parent --merges -n 1 --grep=&quot;$(ChangeLogUpstreamMergePattern)&quot; HEAD"
+      WorkingDirectory="$(MSBuildThisFileDirectory)"
+      ConsoleToMsBuild="true"
+      IgnoreExitCode="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitLastUpstreamMergeRaw" />
+    </Exec>
+
+    <PropertyGroup>
+      <!-- only accept the tag when git describe actually succeeded -->
+      <GitLastTag Condition="'$(GitDescribeExitCode)' == '0'">$([System.String]::Copy('$(GitLastTagRaw)').Trim())</GitLastTag>
+      <GitLastUpstreamMergeCommit>$([System.String]::Copy('$(GitLastUpstreamMergeRaw)').Trim())</GitLastUpstreamMergeCommit>
+      <GitLastMergeCommit>$([System.String]::Copy('$(GitLastMergeRaw)').Trim())</GitLastMergeCommit>
+      <ChangeLogRange Condition="'$(ChangeLogFromRef)' != ''">$(ChangeLogFromRef)..HEAD</ChangeLogRange>
+      <ChangeLogRange Condition="'$(ChangeLogRange)' == '' AND '$(GitLastTag)' != ''">$(GitLastTag)..HEAD</ChangeLogRange>
+      <ChangeLogRange Condition="'$(ChangeLogRange)' == '' AND '$(GitLastUpstreamMergeCommit)' != ''">$(GitLastUpstreamMergeCommit)..HEAD</ChangeLogRange>
+      <ChangeLogRange Condition="'$(ChangeLogRange)' == '' AND '$(GitLastMergeCommit)' != ''">$(GitLastMergeCommit)..HEAD</ChangeLogRange>
+      <!-- #3: subject-only; space before %s would split the arg on Windows cmd, so bullet is added by MSBuild transform below -->
+      <GitPrettyFormat Condition="$([MSBuild]::IsOSPlatform('Windows')) == 'true'">--pretty=format:%25%25s</GitPrettyFormat>
+      <GitPrettyFormat Condition="$([MSBuild]::IsOSPlatform('Windows')) != 'true'">--pretty=format:%25s</GitPrettyFormat>
+      <GitLogBaseCommand>git --no-pager log --no-merges $(GitPrettyFormat)</GitLogBaseCommand>
+    </PropertyGroup>
+
+    <!-- Collect directories for path scoping; optionally include ProjectReference paths -->
+    <ItemGroup>
+      <ChangeLogPaths Include="&quot;$(MSBuildProjectDirectory)&quot;" />
+      <ChangeLogPaths Condition="'$(ChangeLogIncludeReferences)' == 'true'"
+        Include="@(ProjectReference->'&quot;%(RootDir)%(Directory).&quot;')" />
+    </ItemGroup>
+    <PropertyGroup>
+      <ChangeLogPathSpec>@(ChangeLogPaths, ' ')</ChangeLogPathSpec>
+    </PropertyGroup>
+
+    <Exec Condition="'$(ChangeLogRange)' != ''"
+      Command="$(GitLogBaseCommand) $(ChangeLogRange) -- $(ChangeLogPathSpec)"
+      WorkingDirectory="$(MSBuildThisFileDirectory)"
+      ConsoleToMsBuild="true">
+      <Output TaskParameter="ConsoleOutput" ItemName="ChangeLogLines" />
+    </Exec>
+
+    <Exec Condition="'$(ChangeLogRange)' == ''"
+      Command="$(GitLogBaseCommand) --max-count=$(ChangeLogCommitLimit) -- $(ChangeLogPathSpec)"
+      WorkingDirectory="$(MSBuildThisFileDirectory)"
+      ConsoleToMsBuild="true">
+      <Output TaskParameter="ConsoleOutput" ItemName="ChangeLogLines" />
+    </Exec>
+
+    <!-- #3: prepend bullet here, safely, with no shell involved; skip writing an empty file -->
+    <WriteLinesToFile Condition="@(ChangeLogLines->Count()) &gt; 0"
+      File="$(ChangeLogPath)"
+      Lines="@(ChangeLogLines->'- %(Identity)')"
+      Overwrite="true"
+      WriteOnlyWhenDifferent="true"
+      Encoding="UTF-8" />
+
+    <Message Importance="High" Condition="'$(ChangeLogRange)' != ''"
+      Text="Generated changelog at $(ChangeLogPath) using range $(ChangeLogRange)." />
+    <Message Importance="High" Condition="'$(ChangeLogRange)' == ''"
+      Text="Generated changelog at $(ChangeLogPath) using last $(ChangeLogCommitLimit) commits." />
   </Target>
 
   <Import

@@ -15,4 +15,6 @@
     <PackageVersion Include="Spectre.Console.Cli" Version="0.53.1" />
     <PackageVersion Include="TUnit" Version="1.64.6" />
   </ItemGroup>
+
+  <Import Project="Directory.Packages.template.props" />
 </Project>
