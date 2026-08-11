@@ -16,7 +16,7 @@ using Spectre.Console.Cli;
 internal sealed class GreetCommand(ILogger<GreetCommand> logger, IHttpClientFactory httpClientFactory) : AsyncCommand<GreetCommand.Settings>
 {
   /// <inheritdoc/>
-  public override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellation)
+  protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellation)
   {
     using var activity = Telemetry.ActivitySource.StartActivity("Greet");
     activity?.SetTag("greet.name", settings.Name);

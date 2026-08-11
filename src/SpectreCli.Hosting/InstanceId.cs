@@ -45,7 +45,10 @@ public static class InstanceId
   /// <summary>
   /// Creates a UUID v5 (SHA-1 name-based) per RFC 9562.
   /// </summary>
-  private static Guid CreateVersion5(Guid namespaceId, string name)
+  /// <param name="namespaceId">The namespace UUID the name is hashed under.</param>
+  /// <param name="name">The name to hash.</param>
+  /// <returns>The resulting version 5 <see cref="Guid"/>.</returns>
+  internal static Guid CreateVersion5(Guid namespaceId, string name)
   {
     var namespaceBytes = namespaceId.ToByteArray();
     SwapGuidByteOrder(namespaceBytes);

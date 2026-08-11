@@ -43,7 +43,8 @@ builder.Services.AddOpenTelemetry()
     .AddConsoleExporter()
     .AddOtlpExporter(ConfigureOtlp));
 
-builder.Services.AddSpectreConsole<GreetCommand>(args, c => c.UseCommandInstrumentation());
+builder.Services.AddSpectreCliInstrumentation();
+builder.Services.AddSpectreConsole<GreetCommand>(args);
 
 var app = builder.Build();
 return await app.RunSpectreConsoleAsync();
