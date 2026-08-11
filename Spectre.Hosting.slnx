@@ -24,8 +24,7 @@
     <Project Path="src\SpectreCli.Hosting\SpectreCli.Hosting.csproj" Type="Classic C#" />
     <Project Path="src\SpectreCli.OpenTelemetry\SpectreCli.OpenTelemetry.csproj" Type="Classic C#" />
     <File Path="src\Directory.Build.props" />
-  </Folder>
-  <Folder Name="/tests/">
+  </Folder>  <Folder Name="/tests/">
     <Project Path="tests\SpectreCli.Hosting.Tests\SpectreCli.Hosting.Tests.csproj" Type="Classic C#" />
     <Project Path="tests\SpectreCli.OpenTelemetry.Tests\SpectreCli.OpenTelemetry.Tests.csproj" Type="Classic C#" />
     <File Path="tests\Directory.Build.props" />

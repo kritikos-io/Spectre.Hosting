@@ -4,6 +4,11 @@
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
   </PropertyGroup>
 
+  <PropertyGroup Label="Package">
+    <Description>OpenTelemetry traces and metrics for Spectre.Console.Cli commands hosted with Kritikos.SpectreCli.Hosting. Emits a span and duration/execution metrics per command, and captures failures that Spectre's own interceptor pipeline drops, tagging them with error.type and an exception event.</Description>
+    <PackageTags>spectre;spectre.console;cli;console;opentelemetry;otel;tracing;metrics;observability</PackageTags>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\SpectreCli.Hosting\SpectreCli.Hosting.csproj" />
   </ItemGroup>

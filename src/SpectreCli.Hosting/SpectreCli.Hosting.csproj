@@ -1,7 +1,12 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Package">
+    <Description>Runs a Spectre.Console.Cli application as a hosted service in the .NET Generic Host. Resolves commands and their dependencies from Microsoft.Extensions.DependencyInjection, gives every run its own service scope, disposes what the container cannot, returns the command's exit code without process-global state, and exposes an error and cancellation policy plus an observer hook for failed commands.</Description>
+    <PackageTags>spectre;spectre.console;cli;console;hosting;generic-host;dependency-injection;command-line</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

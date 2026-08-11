@@ -1,56 +1,171 @@
-# Templates - Dotnet
+# Spectre.Hosting
 
-A starting point for new .NET projects, based on opinionated rules.
+Run a [Spectre.Console.Cli] application inside the .NET Generic Host, with real dependency injection, a per-run service scope, correct exit codes, and OpenTelemetry instrumentation.
 
-## Getting started
+Spectre.Console.Cli ships its own `ITypeRegistrar`/`ITypeResolver` abstraction so it can be bridged to any container. These packages implement that bridge against `Microsoft.Extensions.DependencyInjection` and then fill the gaps the bridge alone leaves open: scoped lifetimes, deterministic disposal, exception-aware telemetry, and an exit code that survives back to `Main`.
 
-1. In order to be able to update your repository with the latest changes, you can use the following command **after creating** your repo:
-   ```bash
-   git remote add template https://github.com/kritikos-io/templates-dotnet
-   git fetch --all
-   git merge template/main --allow-unrelated-histories
-   ```
-1. Do this as soon as possible, as the unrelated histories flag will lead to a few conflicts that you will need to resolve manually.
-1. Afterwards, you can pull future changes using
-   ```bash
-   git pull template main
-   ```
-1. Rename the solution and project files, replacing 'Solution' to match your project name.
-   1. Solution.slnx
-   1. Solution.sln.DotSettings
-   1. Solution.code-workspace
+| Package | Purpose |
+| --- | --- |
+| [Kritikos.SpectreCli.Hosting](src/SpectreCli.Hosting/README.md) | Host integration: DI, per-run scope, exit codes, error and cancellation policy |
+| [Kritikos.SpectreCli.OpenTelemetry](src/SpectreCli.OpenTelemetry/README.md) | Traces and metrics for every command execution, including failures |
+
+Both packages target `net8.0` and `net10.0`.
+
+## Getting Started
+
+```bash
+dotnet add package Kritikos.SpectreCli.Hosting
+```
+
+```csharp
+using Kritikos.SpectreCli.Hosting;
+using Microsoft.Extensions.Hosting;
+
+var builder = Host.CreateApplicationBuilder(args);
+
+builder.Services.AddHttpClient();
+builder.Services.AddSpectreConsole<GreetCommand>(args);
+
+var app = builder.Build();
+return await app.RunSpectreConsoleAsync();
+```
+
+Commands are resolved from the container, so they take constructor dependencies like any other service:
+
+```csharp
+internal sealed class GreetCommand(ILogger<GreetCommand> logger) : AsyncCommand<GreetCommand.Settings>
+{
+  protected override Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellation)
+  {
+    logger.LogInformation("Greeting {Name}", settings.Name);
+    AnsiConsole.MarkupLineInterpolated($"Hello, {settings.Name}!");
+    return Task.FromResult(0);
+  }
+
+  internal sealed class Settings : CommandSettings
+  {
+    [CommandArgument(0, "<name>")]
+    public string Name { get; init; } = string.Empty;
+  }
+}
+```
+
+> [!IMPORTANT]
+> Since Spectre.Console.Cli 0.55, `ExecuteAsync` on `AsyncCommand<TSettings>` is `protected`, not `public`.
 
 ## Features
 
-Apart from a robust configuration, this template specifically includes:
+1. **Real dependency injection.** Commands, settings, and anything Spectre resolves come from the host container, including `IOptions<T>`, `ILogger<T>`, and typed `HttpClient`s.
+1. **One service scope per run.** Commands may depend on scoped services such as a `DbContext`. The scope is created when Spectre builds its type resolver and disposed when the run ends, on both the success and the failure path.
+1. **Deterministic disposal.** Types Spectre asks the bridge to construct are tracked and disposed, which the container cannot do for `ActivatorUtilities`-created instances.
+1. **Honest exit codes.** The command's exit code is carried back through `RunSpectreConsoleAsync` rather than process-global `Environment.ExitCode`, so a host that shuts down early no longer reports success.
+1. **Observable failures.** Exceptions propagate out of Spectre to the host, where they reach every registered `ICommandExecutionObserver` before the process ends.
+1. **Composable interceptors.** Register as many `ICommandInterceptor`s as you like; Spectre only supports one natively.
+1. **OpenTelemetry out of the box.** A span and two metrics per command execution, with `error.type` and an `exception` event when a command throws.
 
-- Git history to semantic versioning integration using GitVersion
-- Artifacts layout, to avoid bin/obj folders all over the place. These are placed in the `artifacts` folder at the solution level, and are further organized by project and configuration. Can also be overridden either at the project level or by a Directory.Build.props above the repository root to redirect them to a different location.
-- Central package management, to avoid version conflicts and make it easier to update dependencies.
-- Additional targets that enable change log generated from git history, and SBOM generation.
+## Configuration
 
-## Docker
+`AddSpectreConsole` accepts an optional callback over `SpectreConsoleOptions`:
 
-A multi-stage Dockerfile is provided in `docker/` with multiple targets for different use cases. Sample usage is provided in [`compose.sample.yaml`](./docker/compose.sample.yaml).
+```csharp
+builder.Services.AddSpectreConsole<GreetCommand>(
+  args,
+  configureOptions: options => options.CancellationExitCode = 2);
+```
 
-The `RUNTIME_BASE` build arg controls the final image base:
+| Property | Default | Effect |
+| --- | --- | --- |
+| `PropagateExceptions` | `true` | Lets command exceptions escape Spectre so the host can observe them |
+| `RenderUnhandledExceptions` | `true` | Renders the error to the console before shutdown |
+| `UnhandledExceptionExitCode` | `-1` | Exit code when a command throws |
+| `CancellationExitCode` | `130` | Exit code when the run is cancelled |
 
-| Value | Base image | Use case |
-|---|---|---|
-| `web` (default) | `aspnet` | ASP.NET web applications |
-| `app` | `runtime` | Console applications |
-| `self-contained` | `runtime-deps` | Self-contained deployments |
+The last two match Spectre's own defaults, so enabling the host-level hook does not change observable behaviour.
 
-### OpenAPI Linting
+> [!WARNING]
+> Spectre evaluates `PropagateExceptions` *before* its own `ExceptionHandler`. If you configure a handler through `IConfigurator`, also set `PropagateExceptions = false` — otherwise the exception is rethrown and your handler never runs. Doing so also disables `ICommandExecutionObserver` notifications.
 
-OpenAPI documents generated at build time are validated using [Spectral]. Configure rules in `.spectral.yaml` at the repository root.
+## Usage Examples
 
-## Recommendations
+### Scoped dependencies
 
-> Keep in mind that until the dotnet toolset handles generating new projects correctly, you will need to edit new *proj files and remove Version attributes from PackageReference entries. For more details consult [Central Package Management].
+```csharp
+builder.Services.AddDbContext<CatalogContext>();          // scoped by default
+builder.Services.AddSpectreConsole<ImportCommand>(args);  // resolved inside the run's scope
+```
 
-> Provided props files allow compiled models with EF Core 9+, to use them install `Microsoft.EntityFrameworkCore.Tasks` on all projects containing DbContext classes. (Not yet suited for production use, consult [Entity Framework Core MSBuild integration]).
+### Reacting to failures
 
-[Central Package Management]: https://learn.microsoft.com/en-us/nuget/consume-packages/central-package-management
-[Entity Framework Core MSBuild integration]: https://learn.microsoft.com/en-us/ef/core/cli/msbuild
-[Spectral]: https://github.com/stoplightio/spectral
+```csharp
+internal sealed class FailureLogger(ILogger<FailureLogger> logger) : ICommandExecutionObserver
+{
+  public void OnCommandFailed(Exception exception, int exitCode)
+    => logger.LogError(exception, "Command failed with exit code {ExitCode}", exitCode);
+}
+
+builder.Services.AddSingleton<ICommandExecutionObserver, FailureLogger>();
+```
+
+`ICommandInterceptor.InterceptResult` is skipped when a command throws, so an interceptor alone cannot see failures. This is the hook that can.
+
+### Interceptors
+
+Spectre 0.55 resolves `IEnumerable<ICommandInterceptor>` through the type resolver, so plain DI registration is enough:
+
+```csharp
+builder.Services.AddSingleton<ICommandInterceptor, TimingInterceptor>();
+```
+
+For interceptors that are not container-managed, `UseInterceptor` composes them on the configurator:
+
+```csharp
+builder.Services.AddSpectreConsole(args, config => config
+  .UseInterceptor(new TimingInterceptor())
+  .UseInterceptor(new AuditInterceptor()));
+```
+
+`Intercept` runs in registration order; `InterceptResult` runs in reverse.
+
+### Telemetry
+
+```bash
+dotnet add package Kritikos.SpectreCli.OpenTelemetry
+```
+
+```csharp
+builder.Services.AddSpectreCliInstrumentation();
+builder.Services.AddOpenTelemetry()
+  .WithTracing(tracing => tracing.AddSource(SpectreCliInstrumentation.ActivitySourceName))
+  .WithMetrics(metrics => metrics.AddMeter(SpectreCliInstrumentation.MeterName));
+```
+
+See the [OpenTelemetry package readme](src/SpectreCli.OpenTelemetry/README.md) for the spans, metrics, and attributes that are emitted, and [`samples/HostedCli`](samples/HostedCli) for a runnable end-to-end example.
+
+## Building
+
+```bash
+dotnet build Spectre.Hosting.slnx
+dotnet test Spectre.Hosting.slnx
+```
+
+> [!CAUTION]
+> The Microsoft.Testing.Platform runner forwards unrecognised arguments to the test host. Passing MSBuild-style flags such as `--nologo` to `dotnet test` yields a misleading `Zero tests ran` result instead of an error.
+
+Build artifacts land in the `artifacts` folder rather than per-project `bin`/`obj`, and package versions are managed centrally in `Directory.Packages.props`.
+
+## Caveats
+
+> [!NOTE]
+> One scope is created per *process run*, not per command invocation, because a CLI process executes exactly one command.
+
+> [!NOTE]
+> The bridge disposes instances implementing `IDisposable`. Types implementing only `IAsyncDisposable` are not disposed, because Spectre's disposal path is synchronous.
+
+> [!TIP]
+> Prefer nesting your `CommandSettings` class inside its command. Spectre allows standalone settings classes, but telemetry infers the command type from the settings type's declaring type.
+
+## Roadmap
+
+Known gaps and planned work are tracked in [docs/ROADMAP.md](docs/ROADMAP.md).
+
+[Spectre.Console.Cli]: https://spectreconsole.net/cli/
