@@ -19,6 +19,11 @@ public static class ServiceCollectionExtensions
   /// Each command run executes inside its own <see cref="IServiceScope"/>, so commands and their
   /// dependencies may safely take scoped services. The scope is created when Spectre builds its
   /// type resolver and disposed once the run completes — one scope per process run.
+  /// <para>
+  /// Calling this more than once on the same <paramref name="services"/> is a no-op; the first
+  /// registration wins. Register <see cref="ICommandInterceptor"/> implementations in the container
+  /// to observe command execution.
+  /// </para>
   /// </remarks>
   /// <param name="services">The service collection to register into.</param>
   /// <param name="args">The command-line arguments to forward.</param>
@@ -35,7 +40,10 @@ public static class ServiceCollectionExtensions
     ArgumentNullException.ThrowIfNull(args);
     ArgumentNullException.ThrowIfNull(configure);
 
-    AddInfrastructure(services, args, configureOptions);
+    if (!TryAddInfrastructure(services, args, configureOptions))
+    {
+      return services;
+    }
 
     services.AddSingleton<ICommandApp>(sp =>
     {
@@ -55,6 +63,11 @@ public static class ServiceCollectionExtensions
   /// Each command run executes inside its own <see cref="IServiceScope"/>, so commands and their
   /// dependencies may safely take scoped services. The scope is created when Spectre builds its
   /// type resolver and disposed once the run completes — one scope per process run.
+  /// <para>
+  /// Calling this more than once on the same <paramref name="services"/> is a no-op; the first
+  /// registration wins. Register <see cref="ICommandInterceptor"/> implementations in the container
+  /// to observe command execution.
+  /// </para>
   /// </remarks>
   /// <typeparam name="TDefaultCommand">The default command type to execute when no command is specified.</typeparam>
   /// <param name="services">The service collection to register into.</param>
@@ -72,7 +85,10 @@ public static class ServiceCollectionExtensions
     ArgumentNullException.ThrowIfNull(services);
     ArgumentNullException.ThrowIfNull(args);
 
-    AddInfrastructure(services, args, configureOptions);
+    if (!TryAddInfrastructure(services, args, configureOptions))
+    {
+      return services;
+    }
 
     services.AddSingleton<ICommandApp>(sp =>
     {
@@ -84,11 +100,17 @@ public static class ServiceCollectionExtensions
     return services;
   }
 
-  private static void AddInfrastructure(
+  /// <returns><see langword="false"/> when a previous call already registered the infrastructure.</returns>
+  private static bool TryAddInfrastructure(
     IServiceCollection services,
     string[] args,
     Action<SpectreConsoleOptions>? configureOptions)
   {
+    if (services.Any(descriptor => descriptor.ServiceType == typeof(SpectreConsoleResult)))
+    {
+      return false;
+    }
+
     var options = services.AddOptions<SpectreConsoleOptions>();
     if (configureOptions is not null)
     {
@@ -98,6 +120,8 @@ public static class ServiceCollectionExtensions
     services.AddSingleton(new SpectreConsoleArgs(args));
     services.AddSingleton<SpectreConsoleResult>();
     services.AddHostedService<SpectreConsoleWorker>();
+
+    return true;
   }
 
   private static TypeRegistrar CreateRegistrar(IServiceProvider sp)

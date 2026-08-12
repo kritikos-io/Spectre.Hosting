@@ -19,7 +19,11 @@ internal sealed class TypeRegistrar(IServiceScopeFactory scopeFactory) : ITypeRe
   /// <inheritdoc/>
   /// <remarks>Spectre calls this once per run and disposes the returned resolver, which owns the scope.</remarks>
   public ITypeResolver Build()
-    => new TypeResolver(scopeFactory.CreateScope(), registrations, instances, factories);
+    => new TypeResolver(
+      scopeFactory.CreateScope(),
+      registrations.ToDictionary(),
+      instances.ToDictionary(),
+      factories.ToDictionary());
 
   /// <inheritdoc/>
   public void Register(Type service, Type implementation)

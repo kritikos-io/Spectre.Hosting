@@ -150,6 +150,18 @@ public class TypeResolverTests
     await Assert.That(first).IsNotSameReferenceAs(second);
   }
 
+  [Test]
+  public async Task Build_RegistrationAddedAfterwards_DoesNotAffectAnExistingResolver()
+  {
+    using var provider = new ServiceCollection().BuildServiceProvider();
+    var registrar = Registrar(provider);
+
+    using var resolver = (TypeResolver)registrar.Build();
+    registrar.RegisterInstance(typeof(ExecutionProbe), new ExecutionProbe());
+
+    await Assert.That(resolver.Resolve(typeof(ExecutionProbe))).IsNull();
+  }
+
   private static TypeRegistrar Registrar(IServiceProvider provider)
     => new(provider.GetRequiredService<IServiceScopeFactory>());
 

@@ -60,7 +60,7 @@ internal sealed class GreetCommand(ILogger<GreetCommand> logger) : AsyncCommand<
 1. **Deterministic disposal.** Types Spectre asks the bridge to construct are tracked and disposed, which the container cannot do for `ActivatorUtilities`-created instances.
 1. **Honest exit codes.** The command's exit code is carried back through `RunSpectreConsoleAsync` rather than process-global `Environment.ExitCode`, so a host that shuts down early no longer reports success.
 1. **Observable failures.** Exceptions propagate out of Spectre to the host, where they reach every registered `ICommandExecutionObserver` before the process ends.
-1. **Composable interceptors.** Register as many `ICommandInterceptor`s as you like; Spectre only supports one natively.
+1. **Interceptors from the container.** Register as many `ICommandInterceptor`s as you like; they are resolved from DI along with everything else.
 1. **OpenTelemetry out of the box.** A span and two metrics per command execution, with `error.type` and an `exception` event when a command throws.
 
 ## Configuration
@@ -110,21 +110,14 @@ builder.Services.AddSingleton<ICommandExecutionObserver, FailureLogger>();
 
 ### Interceptors
 
-Spectre 0.55 resolves `IEnumerable<ICommandInterceptor>` through the type resolver, so plain DI registration is enough:
+Spectre 0.55 resolves `IEnumerable<ICommandInterceptor>` through the type resolver, so plain DI registration is all that is needed:
 
 ```csharp
 builder.Services.AddSingleton<ICommandInterceptor, TimingInterceptor>();
+builder.Services.AddSingleton<ICommandInterceptor, AuditInterceptor>();
 ```
 
-For interceptors that are not container-managed, `UseInterceptor` composes them on the configurator:
-
-```csharp
-builder.Services.AddSpectreConsole(args, config => config
-  .UseInterceptor(new TimingInterceptor())
-  .UseInterceptor(new AuditInterceptor()));
-```
-
-`Intercept` runs in registration order; `InterceptResult` runs in reverse.
+Both `Intercept` and `InterceptResult` run in registration order — Spectre iterates its interceptor list forward for each pass rather than nesting them.
 
 ### Telemetry
 

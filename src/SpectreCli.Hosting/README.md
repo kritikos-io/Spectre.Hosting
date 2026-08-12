@@ -36,7 +36,7 @@ builder.Services.AddSpectreConsole(args, config =>
 1. Instances the bridge constructs through `ActivatorUtilities` are tracked and disposed, which the container cannot do on its own.
 1. `RunSpectreConsoleAsync` returns the command's exit code without touching process-global `Environment.ExitCode`.
 1. Command failures are surfaced to `ICommandExecutionObserver` implementations, which `ICommandInterceptor` cannot observe.
-1. `UseInterceptor` composes multiple `ICommandInterceptor`s where Spectre allows only one.
+1. `ICommandInterceptor` implementations are resolved from the container, so several can be registered.
 1. `InstanceId.CreateDeterministic` produces a stable RFC 9562 UUID v5 for `service.instance.id`.
 
 ## Configuration
@@ -70,15 +70,14 @@ internal sealed class FailureLogger(ILogger<FailureLogger> logger) : ICommandExe
 builder.Services.AddSingleton<ICommandExecutionObserver, FailureLogger>();
 ```
 
-### Composing interceptors
+### Registering interceptors
 
 ```csharp
-builder.Services.AddSpectreConsole(args, config => config
-  .UseInterceptor(new TimingInterceptor())
-  .UseInterceptor(new AuditInterceptor()));
+builder.Services.AddSingleton<ICommandInterceptor, TimingInterceptor>();
+builder.Services.AddSingleton<ICommandInterceptor, AuditInterceptor>();
 ```
 
-`Intercept` runs in registration order; `InterceptResult` runs in reverse. Container-managed interceptors do not need this — Spectre 0.55 resolves `IEnumerable<ICommandInterceptor>` through the type resolver, so `services.AddSingleton<ICommandInterceptor, T>()` is enough.
+Spectre 0.55 resolves `IEnumerable<ICommandInterceptor>` through the type resolver, which falls back to the host container. Both `Intercept` and `InterceptResult` run in registration order; Spectre iterates the list forward for each pass rather than nesting them.
 
 ## Caveats
 
@@ -89,6 +88,6 @@ builder.Services.AddSpectreConsole(args, config => config
 > Only `IDisposable` is honoured when the run's scope is torn down. Spectre's disposal path is synchronous, so types implementing solely `IAsyncDisposable` are not disposed.
 
 > [!NOTE]
-> Calling `AddSpectreConsole` more than once registers duplicate services. Call it exactly once.
+> Calling `AddSpectreConsole` more than once on the same `IServiceCollection` is a no-op; the first registration wins, so a later call's `args` and callbacks are ignored.
 
 [Spectre.Console.Cli]: https://spectreconsole.net/cli/
