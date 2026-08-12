@@ -5,6 +5,8 @@
   </PropertyGroup>
 
   <PropertyGroup Label="Package">
+    <!-- Spectre.Console.Cli is not CLS-compliant, and its types are part of this public API. -->
+    <SkipClsCompliant>true</SkipClsCompliant>
     <Description>OpenTelemetry traces and metrics for Spectre.Console.Cli commands hosted with Kritikos.SpectreCli.Hosting. Emits a span and duration/execution metrics per command, and captures failures that Spectre's own interceptor pipeline drops, tagging them with error.type and an exception event.</Description>
     <PackageTags>spectre;spectre.console;cli;console;opentelemetry;otel;tracing;metrics;observability</PackageTags>
   </PropertyGroup>

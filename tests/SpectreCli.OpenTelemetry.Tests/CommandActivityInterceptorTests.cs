@@ -24,7 +24,20 @@ public class CommandActivityInterceptorTests
     await Assert.That(activity.DisplayName).IsEqualTo(nameof(SucceedingCommand));
     await Assert.That(activity.Status).IsEqualTo(ActivityStatusCode.Ok);
     await Assert.That(activity.GetTagItem("spectre.command.exit_code")).IsEqualTo(0);
+    await Assert.That(activity.GetTagItem("spectre.command.type"))
+      .IsEqualTo(typeof(SucceedingCommand).FullName);
     await Assert.That(activity.GetTagItem("error.type")).IsNull();
+  }
+
+  [Test]
+  public async Task Run_DefaultCommand_ReportsAStableNameInsteadOfSpectresSentinel()
+  {
+    using var capture = new TelemetryCapture();
+
+    await RunAsync<SucceedingCommand>();
+
+    await Assert.That(capture.Activities.Single().GetTagItem("spectre.command.name"))
+      .IsEqualTo("(default)");
   }
 
   [Test]
@@ -90,21 +103,34 @@ public class CommandActivityInterceptorTests
     var executions = capture.Measurements.Single(m => m.Instrument == "spectre.command.executions");
     await Assert.That(executions.Value).IsEqualTo(1);
     await Assert.That(executions.Tag("error.type")).IsEqualTo(typeof(InvalidOperationException).FullName);
+    await Assert.That(executions.Tag("spectre.command.type")).IsEqualTo(typeof(ThrowingCommand).FullName);
     await Assert.That(capture.Measurements.Any(m => m.Instrument == "spectre.command.duration")).IsTrue();
   }
 
-  // Pins roadmap 2.3: settings declared outside a command make the span report the settings type.
+  // Spectre exposes no supported way to learn the command type when settings are not nested,
+  // so the attribute is omitted rather than reporting the settings type (roadmap 2.3).
   [Test]
-  public async Task Run_SettingsNotNestedInTheCommand_MisreportsTheCommandType()
+  public async Task Run_SettingsNotNestedInTheCommand_OmitsTheCommandType()
   {
     using var capture = new TelemetryCapture();
 
     await RunAsync<StandaloneSettingsCommand>();
 
     var activity = capture.Activities.Single();
-    await Assert.That(activity.DisplayName).IsEqualTo(nameof(StandaloneSettings));
-    await Assert.That(activity.GetTagItem("spectre.command.type"))
-      .IsEqualTo(typeof(StandaloneSettings).FullName);
+    await Assert.That(activity.GetTagItem("spectre.command.type")).IsNull();
+    await Assert.That(activity.DisplayName).IsEqualTo("(default)");
+  }
+
+  [Test]
+  public async Task Run_SettingsNotNestedInTheCommand_OmitsTheCommandTypeFromMetrics()
+  {
+    using var capture = new TelemetryCapture();
+
+    await RunAsync<StandaloneSettingsCommand>();
+
+    var executions = capture.Measurements.Single(m => m.Instrument == "spectre.command.executions");
+    await Assert.That(executions.Tag("spectre.command.type")).IsNull();
+    await Assert.That(executions.Tag("spectre.command.name")).IsEqualTo("(default)");
   }
 
   private static Task<int> RunAsync<TCommand>()

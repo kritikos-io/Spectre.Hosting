@@ -5,6 +5,8 @@
   </PropertyGroup>
 
   <PropertyGroup Label="Package">
+    <!-- Spectre.Console.Cli is not CLS-compliant, and its types are part of this public API. -->
+    <SkipClsCompliant>true</SkipClsCompliant>
     <Description>Runs a Spectre.Console.Cli application as a hosted service in the .NET Generic Host. Resolves commands and their dependencies from Microsoft.Extensions.DependencyInjection, gives every run its own service scope, disposes what the container cannot, returns the command's exit code without process-global state, and exposes an error and cancellation policy plus an observer hook for failed commands.</Description>
     <PackageTags>spectre;spectre.console;cli;console;hosting;generic-host;dependency-injection;command-line</PackageTags>
   </PropertyGroup>

@@ -162,7 +162,7 @@ Build artifacts land in the `artifacts` folder rather than per-project `bin`/`ob
 > The bridge disposes instances implementing `IDisposable`. Types implementing only `IAsyncDisposable` are not disposed, because Spectre's disposal path is synchronous.
 
 > [!TIP]
-> Prefer nesting your `CommandSettings` class inside its command. Spectre allows standalone settings classes, but telemetry infers the command type from the settings type's declaring type.
+> Prefer nesting your `CommandSettings` class inside its command. Spectre allows standalone settings classes, but telemetry infers the command type from the settings type's declaring type, so `spectre.command.type` is omitted for them.
 
 ## Roadmap
 

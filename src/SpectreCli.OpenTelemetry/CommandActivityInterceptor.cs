@@ -13,6 +13,12 @@ using Spectre.Console.Cli;
 /// </summary>
 internal sealed class CommandActivityInterceptor : ICommandInterceptor, ICommandExecutionObserver
 {
+  /// <summary>Spectre's internal name for a default command invoked without an explicit name.</summary>
+  private const string DefaultCommandSentinel = "__default_command";
+
+  /// <summary>Reported in place of <see cref="DefaultCommandSentinel"/>.</summary>
+  private const string DefaultCommandName = "(default)";
+
   private long startTimestamp;
   private Activity? activity;
   private CommandContext? context;
@@ -27,13 +33,18 @@ internal sealed class CommandActivityInterceptor : ICommandInterceptor, ICommand
     this.settings = settings;
 
     var commandType = ResolveCommandType(settings);
+    var commandName = ResolveCommandName(context);
 
     activity = SpectreCliInstrumentation.ActivitySource.StartActivity(
-      commandType.Name,
+      commandType?.Name ?? commandName,
       ActivityKind.Internal);
 
-    activity?.SetTag("spectre.command.name", context.Name);
-    activity?.SetTag("spectre.command.type", commandType.FullName);
+    activity?.SetTag("spectre.command.name", commandName);
+
+    if (commandType is not null)
+    {
+      activity?.SetTag("spectre.command.type", commandType.FullName);
+    }
   }
 
   /// <inheritdoc/>
@@ -54,8 +65,13 @@ internal sealed class CommandActivityInterceptor : ICommandInterceptor, ICommand
     Complete(context, settings, exitCode, exception);
   }
 
-  private static Type ResolveCommandType(CommandSettings settings)
-    => settings.GetType().DeclaringType ?? settings.GetType();
+  // Only a settings class nested inside its command can be attributed back to that command; Spectre
+  // exposes no supported way for an interceptor to learn the executing command's type.
+  private static Type? ResolveCommandType(CommandSettings settings)
+    => settings.GetType().DeclaringType;
+
+  private static string ResolveCommandName(CommandContext context)
+    => context.Name == DefaultCommandSentinel ? DefaultCommandName : context.Name;
 
   private void Complete(CommandContext context, CommandSettings settings, int result, Exception? exception)
   {
@@ -98,10 +114,14 @@ internal sealed class CommandActivityInterceptor : ICommandInterceptor, ICommand
 
     var tags = new TagList
     {
-      { "spectre.command.name", context.Name },
-      { "spectre.command.type", commandType.Name },
+      { "spectre.command.name", ResolveCommandName(context) },
       { "spectre.command.exit_code", result },
     };
+
+    if (commandType is not null)
+    {
+      tags.Add("spectre.command.type", commandType.FullName);
+    }
 
     if (errorType is not null)
     {

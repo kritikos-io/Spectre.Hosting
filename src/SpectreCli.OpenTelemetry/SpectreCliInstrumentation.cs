@@ -27,10 +27,16 @@ public static class SpectreCliInstrumentation
   internal static Meter Meter { get; } = new(MeterName);
 
   /// <summary>Gets the histogram that records command execution duration in seconds.</summary>
-  internal static Histogram<double> CommandDuration { get; } = Meter.CreateHistogram<double>(
+  internal static Histogram<double> CommandDuration { get; } = Meter.CreateHistogram(
     "spectre.command.duration",
     unit: "s",
-    description: "Duration of Spectre.Console.Cli command execution");
+    description: "Duration of Spectre.Console.Cli command execution",
+    tags: null,
+    advice: new InstrumentAdvice<double>
+    {
+      // Spans a CLI's realistic range: a few milliseconds of startup through a multi-minute job.
+      HistogramBucketBoundaries = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60, 300],
+    });
 
   /// <summary>Gets the counter that tracks total command executions.</summary>
   internal static Counter<long> CommandExecutions { get; } = Meter.CreateCounter<long>(
