@@ -157,8 +157,4 @@ Build artifacts land in the `artifacts` folder rather than per-project `bin`/`ob
 > [!TIP]
 > Prefer nesting your `CommandSettings` class inside its command. Spectre allows standalone settings classes, but telemetry infers the command type from the settings type's declaring type, so `spectre.command.type` is omitted for them.
 
-## Roadmap
-
-Known gaps and planned work are tracked in [docs/ROADMAP.md](docs/ROADMAP.md).
-
 [Spectre.Console.Cli]: https://spectreconsole.net/cli/

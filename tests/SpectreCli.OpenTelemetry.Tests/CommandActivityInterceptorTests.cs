@@ -108,7 +108,7 @@ public class CommandActivityInterceptorTests
   }
 
   // Spectre exposes no supported way to learn the command type when settings are not nested,
-  // so the attribute is omitted rather than reporting the settings type (roadmap 2.3).
+  // so the attribute is omitted rather than reporting the settings type.
   [Test]
   public async Task Run_SettingsNotNestedInTheCommand_OmitsTheCommandType()
   {
