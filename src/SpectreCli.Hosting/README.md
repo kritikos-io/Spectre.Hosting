@@ -81,6 +81,9 @@ Spectre 0.55 resolves `IEnumerable<ICommandInterceptor>` through the type resolv
 
 ## Caveats
 
+> [!IMPORTANT]
+> `SpectreConsoleWorker` calls `IHostApplicationLifetime.StopApplication()` as soon as `ICommandApp.RunAsync` returns, successfully or not. The host is built around exactly one command per process; it cannot be combined with a long-running service, such as an ASP.NET Core backend, in the same host.
+
 > [!WARNING]
 > Spectre evaluates `PropagateExceptions` *before* its own `ExceptionHandler`. If you configure a handler through `IConfigurator`, also set `PropagateExceptions = false`, which in turn disables `ICommandExecutionObserver` notifications.
 

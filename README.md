@@ -148,6 +148,9 @@ Build artifacts land in the `artifacts` folder rather than per-project `bin`/`ob
 
 ## Caveats
 
+> [!IMPORTANT]
+> The host shuts down as soon as the command completes, successfully or not. This package is built for a one-shot CLI process and cannot be combined with a long-running service, such as an ASP.NET Core backend, in the same host.
+
 > [!NOTE]
 > One scope is created per *process run*, not per command invocation, because a CLI process executes exactly one command.
 
