@@ -1156,3 +1156,9 @@ artifacts/**
 
 ## Machine-specific overrides
 compose.override.yaml
+
+## Generated per-project GitVersion config (rendered from the root GitVersion.yml)
+src/*/GitVersion.yml
+
+## Copilot agent scratch/research notes (ephemeral, not project documentation)
+.copilot-tracking/
